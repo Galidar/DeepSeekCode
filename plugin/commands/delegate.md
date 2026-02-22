@@ -9,42 +9,66 @@ Carga y sigue todas las guias de la skill `deepseek-code-mastery` de este plugin
 
 **Tu tarea:** Basandote en la solicitud del usuario "$ARGUMENTS", construye y ejecuta el comando de delegacion correcto.
 
-## Proceso
+## Proceso Token-Eficiente
 
-1. **Analiza la tarea**: Determina si necesitas un template (codigo esqueleto con TODOs) o si es generacion libre.
+**REGLA CRITICA: Nunca uses Write para guardar el codigo generado por DeepSeek. Siempre usa pipe directo a disco.**
 
+El flujo eficiente tiene 3 fases:
+
+### Fase 1: Analiza y prepara
+
+1. **Analiza la tarea**: Determina que archivos se generaran y donde guardarlos.
 2. **Decide los flags**:
-   - Si hay un archivo template con TODOs -> usa `--template ruta/archivo`
-   - Si hay un archivo de referencia de estilo -> usa `--context ruta/archivo`
-   - Si es correccion de un intento anterior -> usa `--feedback "errores especificos"`
-   - Para tareas grandes -> usa `--max-retries 2`
+   - Template con TODOs -> `--template ruta/archivo`
+   - Archivo de referencia de estilo -> `--context ruta/archivo`
+   - Correccion de intento anterior -> `--feedback "errores especificos"`
+   - Tareas grandes -> `--max-retries 2`
+   - `--negotiate-skills`: DeepSeek elige sus skills (~15s extra, pero mas preciso)
 
-3. **Construye el comando**:
-   ```bash
-   python run.py --delegate "DESCRIPCION_PRECISA_DE_LA_TAREA" [--template FILE] [--context FILE] [--feedback "..."] [--negotiate-skills] --json
-   ```
+### Fase 2: Ejecuta con pipe directo a disco
 
-   - `--negotiate-skills`: Deja que DeepSeek elija sus propias skills del catalogo en vez de inyeccion heuristica. Usa ~15s extra pero DeepSeek solo recibe lo que realmente necesita.
+**Para un solo archivo** (lo mas comun):
+```bash
+cd DEEPSEEK_DIR && python run.py --delegate "TAREA_PRECISA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --output "RUTA/DESTINO/archivo.ext" --preview 5
+```
 
-   IMPORTANTE: Ejecuta desde el directorio raiz del proyecto DeepSeek Code (donde esta `run.py`). Detectalo con: `git rev-parse --show-toplevel` o busca `run.py` en la ruta de instalacion del usuario.
+**Para multiples archivos** (DeepSeek genera varios):
+```bash
+cd DEEPSEEK_DIR && python run.py --delegate "TAREA_PRECISA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --split --dir "RUTA/PROYECTO/" --preview 5
+```
 
-4. **Ejecuta via Bash** y captura el JSON de respuesta.
+IMPORTANTE:
+- `DEEPSEEK_DIR` es donde esta `run.py`. Detecta con `git rev-parse --show-toplevel` o busca en la ruta de instalacion.
+- El pipe `|` envia la respuesta directo al disco. Claude NUNCA ve el codigo completo.
+- `--preview 5` incluye las primeras 5 lineas en la metadata para verificacion rapida.
+- Claude solo recibe metadata: lineas, chars, exito, duracion, archivos guardados.
 
-5. **Interpreta el resultado**:
-   - `success: true` -> Extrae `response` y aplica el codigo al proyecto
-   - `continuations: N` -> DeepSeek se trunco N veces y auto-continuo (transparente)
-   - `success: false` + `truncated: true` -> Reduce scope o usa `--quantum`
-   - `success: false` + `missing_todos` -> Re-ejecuta con `--feedback`
+### Fase 3: Supervisa y corrige
 
-6. **Aplica el codigo**: Escribe el resultado en los archivos del proyecto del usuario.
+1. **Lee la metadata** que imprime save_response (success, lines, chars, saved_to).
+2. **Verifica rapidamente** el archivo guardado leyendo solo las primeras lineas si es necesario.
+3. **Aplica correcciones** con el tool Edit si hay bugs — ediciones quirurgicas, NO reescribir.
+4. Si `success: false` o `truncated: true` -> reduce scope o usa `/deepseek-code:quantum`.
+
+## Por que este flujo
+
+| Flujo antiguo | Flujo eficiente |
+|:---:|:---:|
+| DeepSeek genera ~5000 tokens | DeepSeek genera ~5000 tokens |
+| Claude recibe TODO el codigo | Claude recibe ~200 tokens metadata |
+| Claude REESCRIBE con Write (~5000 tokens) | Archivo se guarda directo por pipe |
+| **Total Claude: ~10000 tokens** | **Total Claude: ~400 tokens** |
+| **Ahorro: 0%** | **Ahorro: ~96%** |
 
 ## Auto-Continuacion
 
-Si DeepSeek trunca su respuesta (llaves sin cerrar, funciones incompletas), el sistema automaticamente detecta el truncamiento y envia "continua" hasta 3 veces. Las partes se concatenan en una respuesta completa. No necesitas hacer nada — es transparente.
+Si DeepSeek trunca su respuesta, el sistema automaticamente detecta el truncamiento y envia "continua" hasta 3 veces. Las partes se concatenan. Es transparente — save_response recibe la respuesta completa.
 
 ## Tips
 
 - La tarea debe ser PRECISA y DESCRIPTIVA. "crea un endpoint" es malo. "crea endpoint POST /api/users con validacion Zod de email+name+password, hash bcrypt, y respuesta 201 con user sin password" es bueno.
 - DeepSeek responde SOLO codigo, sin markdown ni explicaciones.
-- Si el resultado es muy grande para una delegacion, considera usar `/deepseek-code:multi-step` o `/deepseek-code:quantum`.
-- Para refinamiento iterativo (crear -> mejorar -> optimizar), usa `/deepseek-code:converse`.
+- Si el resultado es muy grande para una delegacion, considera `/deepseek-code:multi-step` o `/deepseek-code:quantum`.
+- Para refinamiento iterativo, usa `/deepseek-code:converse`.

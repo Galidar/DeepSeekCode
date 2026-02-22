@@ -16,6 +16,7 @@ hiddenimports = [
     'deepseek_code.tools', 'deepseek_code.tools.filesystem', 'deepseek_code.tools.file_editor',
     'deepseek_code.tools.shell', 'deepseek_code.tools.memory_tool',
     'deepseek_code.tools.key_manager', 'deepseek_code.tools.archive_tool', 'deepseek_code.tools.file_utils',
+    'deepseek_code.tools.save_response',
     'deepseek_code.client', 'deepseek_code.client.deepseek_client',
     'deepseek_code.client.web_session', 'deepseek_code.client.web_tool_caller',
     'deepseek_code.client.context_manager',

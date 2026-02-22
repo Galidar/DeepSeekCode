@@ -13,8 +13,9 @@
 ![Commands](https://img.shields.io/badge/Commands-5-22C55E?style=for-the-badge)
 ![Skills](https://img.shields.io/badge/Knowledge-1000+_lines-F59E0B?style=for-the-badge)
 ![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
-![Version](https://img.shields.io/badge/v2.3.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/v2.4.0-blue?style=for-the-badge)
 ![Semantic](https://img.shields.io/badge/Semantic_Engine-TF--IDF_|_Bayesian-9333EA?style=for-the-badge)
+![Efficient](https://img.shields.io/badge/Token_Savings-~96%25-10B981?style=for-the-badge)
 
 <br>
 
@@ -24,7 +25,7 @@
 
 ## What This Plugin Does
 
-This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package** and **Semantic Engine** for self-evolving code generation. v2.3 adds a pure-Python Semantic Engine (TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends) that powers skill selection, memory relevance, and predictive risk scoring. It includes a comprehensive 1100+ line knowledge base covering every feature, mode, and configuration.
+This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package**, **Semantic Engine**, and **Token-Efficient Pipeline** for self-evolving code generation. v2.4 adds `save_response.py` — a pipe-to-disk handler that writes DeepSeek output directly to files, cutting Claude's token usage by ~96% on code generation tasks. Combined with v2.3's Semantic Engine (TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends), the system is both intelligent and cost-effective. Includes a comprehensive 1200+ line knowledge base covering every feature, mode, and configuration.
 
 ```mermaid
 graph LR
@@ -129,7 +130,7 @@ If you see the system status report, the plugin is working correctly.
 
 ## Knowledge Skill
 
-The plugin includes **deepseek-code-mastery** — a comprehensive 1000+ line knowledge base that covers:
+The plugin includes **deepseek-code-mastery** — a comprehensive 1200+ line knowledge base that covers:
 
 | Topic | Coverage |
 |:-----:|:---------|
@@ -142,6 +143,7 @@ The plugin includes **deepseek-code-mastery** — a comprehensive 1000+ line kno
 | **Memory** | Surgical (per-project) + Global (cross-project) learning |
 | **🔮 Intelligence** | Introspective debugging, shadow learning, git conflicts, requirements pipeline, health reports |
 | **🧠 Semantic Engine** | TF-IDF vectorization, cosine similarity, Bayesian Beta inference, temporal decay, Mann-Kendall trends, composite risk scoring |
+| **⚡ Token Pipeline** | save_response.py pipe-to-disk, ~96% token savings, auto-split multi-file, metadata-only mode |
 | **Session** | Web login (PoW/WASM), API keys, health check, multi-account |
 | **i18n** | English, Spanish, Japanese with fallback system |
 | **V3.2** | Auto-select model, thinking mode, smart chunking, scalable pool |
@@ -195,7 +197,7 @@ plugin/
     status.md                /deepseek-code:status command
   skills/
     deepseek-code-mastery/
-      SKILL.md               Complete knowledge base (~1100 lines)
+      SKILL.md               Complete knowledge base (~1200 lines)
   README.md                  This file
 ```
 
@@ -205,7 +207,7 @@ plugin/
 
 <br>
 
-**DeepSeek Code Plugin v2.3** — Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
+**DeepSeek Code Plugin v2.4** — Token-Efficient Pipeline + Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
 
 <br>
 

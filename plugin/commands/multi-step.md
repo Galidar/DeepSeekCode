@@ -9,15 +9,19 @@ Carga y sigue todas las guias de la skill `deepseek-code-mastery` de este plugin
 
 **Tu tarea:** Basandote en la solicitud del usuario "$ARGUMENTS", crea un plan JSON y ejecutalo.
 
-## Proceso
+## Proceso Token-Eficiente
+
+**REGLA CRITICA: Nunca uses Write para guardar codigo generado. Siempre usa pipe directo a disco.**
+
+### Fase 1: Planifica
 
 1. **Analiza la feature** y divide en pasos logicos (1 paso = 1 archivo o componente).
+2. **Identifica dependencias**: Si paso B necesita resultado de paso A -> `context_from: ["A"]`.
+3. **Identifica paralelismo**: Pasos independientes -> mismo `parallel_group`.
 
-2. **Identifica dependencias**: Si el paso B necesita el resultado del paso A, usa `context_from: ["A"]`.
+### Fase 2: Crea y ejecuta el plan
 
-3. **Identifica paralelismo**: Pasos independientes pueden ir en el mismo `parallel_group`.
-
-4. **Crea el plan JSON** como archivo temporal:
+1. **Escribe el plan JSON** como archivo temporal:
 
 ```json
 {
@@ -36,18 +40,19 @@ Carga y sigue todas las guias de la skill `deepseek-code-mastery` de este plugin
 }
 ```
 
-5. **Escribe el plan** a un archivo temporal (ej: `/tmp/plan.json`).
+2. **Ejecuta con pipe directo**:
+```bash
+cd DEEPSEEK_DIR && python run.py --multi-step /tmp/plan.json --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --split --dir "RUTA/PROYECTO/" --preview 3
+```
 
-6. **Ejecuta**:
-   ```bash
-   python run.py --multi-step /tmp/plan.json --json
-   ```
+IMPORTANTE: Ejecuta desde el directorio raiz del proyecto DeepSeek Code (donde esta `run.py`).
 
-   IMPORTANTE: Ejecuta desde el directorio raiz del proyecto DeepSeek Code (donde esta `run.py`). Detectalo con: `git rev-parse --show-toplevel` o busca `run.py` en la ruta de instalacion del usuario.
+### Fase 3: Supervisa y corrige
 
-7. **Procesa resultados**: El JSON de respuesta tiene un array con el resultado de cada paso.
-
-8. **Aplica los archivos generados** al proyecto del usuario.
+1. **Lee la metadata** — cuantos archivos se generaron, cuales pasos tuvieron exito.
+2. **Verifica** cada archivo leyendo solo las primeras lineas.
+3. **Corrige** bugs puntuales con Edit (ediciones quirurgicas).
 
 ## Ejemplo de Plan
 

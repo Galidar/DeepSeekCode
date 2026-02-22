@@ -1,6 +1,6 @@
 ---
 name: deepseek-code-mastery
-description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.3 incluye Semantic Engine central (TF-IDF puro Python, cosine similarity, Bayesian Beta inference, temporal decay, Mann-Kendall trend detection) que potencia todos los subsistemas. Skills ahora se seleccionan por similaridad semantica TF-IDF (no solo keywords). Memoria usa temporal decay + frecuencia para relevancia, busqueda semantica find_relevant(), y compactacion inteligente. GlobalMemory con Bayesian success rates y clustering semantico de errores. Predictive Intelligence con Bayesian composite risk (0-100), confidence intervals, y trend slopes. Plus Intelligence Package (5 features), V3.2 auto-select model, thinking mode, smart chunking, 15 MCP tools, dual quantum sessions, multi-step, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
+description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.4 agrega Token-Efficient Pipeline con save_response.py que escribe codigo directo al disco via pipe, reduciendo tokens de Claude ~96% en tareas de generacion. v2.3 Semantic Engine central (TF-IDF puro Python, cosine similarity, Bayesian Beta inference, temporal decay, Mann-Kendall trend detection) potencia todos los subsistemas. Skills se seleccionan por similaridad semantica TF-IDF. Memoria usa temporal decay + busqueda semantica + compactacion inteligente. GlobalMemory con Bayesian success rates y clustering semantico. Predictive Intelligence con Bayesian composite risk, confidence intervals, trend slopes. Plus Intelligence Package (5 features), V3.2 auto-select model, thinking mode, smart chunking, 15 MCP tools, dual quantum sessions, multi-step, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
 ---
 
 # DeepSeek Code Mastery — Guia Completa para Claude Code
@@ -1093,41 +1093,147 @@ Con 128K de contexto, ser selectivo con skills para tareas con templates grandes
 
 ---
 
+## 12b. Flujo Token-Eficiente (v2.4) — Pipe Directo a Disco
+
+### Problema
+
+Cuando Claude delega a DeepSeek y luego reescribe el codigo con Write, los tokens de
+salida se duplican: DeepSeek genera ~5000 tokens, Claude los recibe Y los vuelve a
+emitir. Esto desperdicia ~96% de los tokens de Claude en re-escritura mecanica.
+
+### Solucion: save_response.py
+
+El helper `deepseek_code.tools.save_response` intercepta la salida JSON de DeepSeek y
+la guarda directo al disco. Claude solo recibe metadata ligera (~200 tokens).
+
+```
+ANTES (ineficiente):
+  DeepSeek → [5000 tok codigo] → Claude → [5000 tok Write] → disco
+  Total Claude: ~10,000 tokens
+
+AHORA (eficiente):
+  DeepSeek → [5000 tok codigo] → pipe → disco
+  Claude recibe: ~200 tok metadata
+  Total Claude: ~400 tokens (ahorro 96%)
+```
+
+### Uso por Modo
+
+**Delegacion (archivo unico):**
+```bash
+cd <DEEPSEEK_DIR> && python run.py --delegate "TAREA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --output "ruta/archivo.ext" --preview 5
+```
+
+**Delegacion (multi-archivo auto-split):**
+```bash
+cd <DEEPSEEK_DIR> && python run.py --delegate "TAREA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --split --dir "ruta/proyecto/" --preview 3
+```
+
+**Quantum:**
+```bash
+cd <DEEPSEEK_DIR> && python run.py --quantum "TAREA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --output "ruta/archivo.ext" --preview 5
+```
+
+**Multi-step:**
+```bash
+cd <DEEPSEEK_DIR> && python run.py --multi-step plan.json --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --split --dir "ruta/proyecto/" --preview 3
+```
+
+**Solo metadata (sin guardar):**
+```bash
+cd <DEEPSEEK_DIR> && python run.py --delegate "TAREA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --meta-only
+```
+
+### Opciones de save_response
+
+| Flag | Descripcion |
+|------|-------------|
+| `--output FILE` | Guarda respuesta completa en un archivo |
+| `--split` | Auto-detecta limites de archivos y separa |
+| `--dir DIR` | Directorio base para `--split` (default: `.`) |
+| `--meta-only` | Solo imprime metadata, descarta respuesta |
+| `--preview N` | Incluye primeras N lineas en la metadata |
+
+### Metadata de Salida
+
+Claude recibe un JSON ligero como este:
+
+```json
+{
+  "success": true,
+  "mode": "delegate",
+  "duration_s": 45.2,
+  "continuations": 0,
+  "response_lines": 380,
+  "response_chars": 12400,
+  "files_written": 1,
+  "saved_to": "ruta/archivo.ext",
+  "preview": "<!DOCTYPE html>\n<html>..."
+}
+```
+
+### Regla para Claude
+
+**NUNCA uses Write para guardar codigo generado por DeepSeek.** Siempre usa pipe
+directo. Solo usa Edit para correcciones quirurgicas despues de guardar.
+
+---
+
 ## 13. Referencia Rapida de Comandos
 
 ```bash
-# Delegacion simple
+# ═══ FLUJO EFICIENTE (v2.4 — RECOMENDADO) ═══
+
+# Delegacion → archivo unico
+python run.py --delegate "TAREA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response -o "ruta/archivo.ext" --preview 5
+
+# Delegacion → multi-archivo
+python run.py --delegate "TAREA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --split -d "ruta/proyecto/"
+
+# Quantum → archivo unico
+python run.py --quantum "TAREA" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response -o "ruta/archivo.ext" --preview 5
+
+# Multi-step → multi-archivo
+python run.py --multi-step plan.json --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --split -d "ruta/proyecto/"
+
+# ═══ FLUJO DIRECTO (cuando necesitas ver el codigo) ═══
+
 python run.py --delegate "TAREA" --json
 python run.py --delegate "TAREA" --template FILE --json
-python run.py --delegate "TAREA" --template FILE --context REF --json
 python run.py --delegate "TAREA" --feedback "ERRORES" --json
-
-# Quantum dual
-python run.py --quantum "TAREA" --json
-python run.py --quantum "TAREA" --template FILE --json
 python run.py --quantum "TAREA" --quantum-angles "a,b" --json
-
-# Multi-step
 python run.py --multi-step plan.json --json
-python run.py --multi-step-inline '{"steps":[...]}' --json
 
-# Intelligence Package (v2.2)
+# ═══ INTELLIGENCE PACKAGE (v2.2) ═══
+
 python run.py --requirements features.md --json
 python run.py --requirements features.md --auto-execute --json
 python run.py --health-report --json
 python run.py --health-report --project-context ./CLAUDE.md --json
 
-# Otros
+# ═══ OTROS ═══
+
 python run.py -q "pregunta rapida" --json
 python run.py --agent "meta autonoma" --json
 python run.py                            # Interactivo
 
-# Flags globales
+# ═══ FLAGS GLOBALES ═══
+
 --max-retries N       # Reintentos (default: 1)
 --no-validate         # Sin validacion
 --project-context X   # CLAUDE.md del proyecto
 --config X            # Config alternativa
 --json                # Output JSON
+--negotiate-skills    # DeepSeek elige sus skills
 --requirements X      # v2.2: Documento de requisitos
 --auto-execute        # v2.2: Ejecutar plan auto-generado
 --health-report       # v2.2: Reporte de salud predictivo

@@ -9,10 +9,13 @@ Carga y sigue todas las guias de la skill `deepseek-code-mastery` de este plugin
 
 **Tu tarea:** Basandote en "$ARGUMENTS", construye y ejecuta una conversacion multi-turno con DeepSeek.
 
-## Proceso
+## Proceso Token-Eficiente
 
-1. **Prepara los mensajes**: Divide la tarea en turnos logicos de conversacion.
+**REGLA CRITICA: Nunca uses Write para guardar codigo generado. Siempre usa pipe directo a disco.**
 
+### Fase 1: Prepara los mensajes
+
+1. **Divide la tarea** en turnos logicos de conversacion.
 2. **Crea el JSON de entrada**:
    ```json
    {
@@ -21,38 +24,39 @@ Carga y sigue todas las guias de la skill `deepseek-code-mastery` de este plugin
    }
    ```
 
-3. **Ejecuta el comando**:
-   ```bash
-   # Opcion A: Mensaje unico
-   python run.py --converse "MENSAJE" --json
+### Fase 2: Ejecuta con pipe directo
 
-   # Opcion B: Multiples turnos via archivo
-   echo '{"messages":["msg1","msg2"]}' > /tmp/converse.json
-   python run.py --converse-file /tmp/converse.json --json
+**Mensaje unico con salida a archivo:**
+```bash
+cd DEEPSEEK_DIR && python run.py --converse "MENSAJE" --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --output "RUTA/archivo.ext" --preview 5
+```
 
-   # Opcion C: Via stdin
-   echo '{"messages":["msg1","msg2"]}' | python run.py --converse --json
-   ```
+**Multiples turnos con salida multi-archivo:**
+```bash
+echo '{"messages":["msg1","msg2"]}' > /tmp/converse.json
+cd DEEPSEEK_DIR && python run.py --converse-file /tmp/converse.json --json 2>/dev/null | \
+    python -m deepseek_code.tools.save_response --split --dir "RUTA/PROYECTO/" --preview 3
+```
 
-   IMPORTANTE: Ejecuta desde el directorio raiz del proyecto DeepSeek Code (donde esta `run.py`). Detectalo con: `git rev-parse --show-toplevel` o busca `run.py` en la ruta de instalacion del usuario.
+IMPORTANTE: Ejecuta desde el directorio raiz del proyecto DeepSeek Code (donde esta `run.py`).
 
-4. **Interpreta el resultado**:
-   - `success: true` -> Usa `response` (ultima respuesta) y `turns` (historial completo)
-   - Cada turno incluye `user`, `assistant`, `duration_s`, `response_tokens`
-   - `token_usage` muestra consumo total del dialogo
+### Fase 3: Supervisa y corrige
 
-5. **Aplica el resultado**: Escribe el codigo generado en los archivos del proyecto.
+1. **Lee la metadata** — turnos completados, tokens por turno, archivos guardados.
+2. **Verifica** resultado leyendo solo las primeras lineas.
+3. **Corrige** bugs puntuales con Edit.
 
 ## Cuando Usar Converse
 
-- Refinamiento iterativo: "crea la base" -> "ahora agrega validacion" -> "optimiza el rendimiento"
-- Debugging colaborativo: enviar error -> recibir diagnostico -> aplicar fix -> verificar
-- Diseno progresivo: construir una feature paso a paso con feedback entre turnos
-- Cualquier tarea donde necesites que DeepSeek mantenga contexto entre mensajes
+- Refinamiento iterativo: "crea la base" -> "ahora agrega validacion" -> "optimiza"
+- Debugging colaborativo: enviar error -> diagnostico -> fix -> verificar
+- Diseno progresivo: construir feature paso a paso con feedback entre turnos
+- Cualquier tarea donde DeepSeek necesite mantener contexto entre mensajes
 
 ## Tips
 
 - Cada mensaje acumula historial: DeepSeek recuerda TODO lo anterior.
 - El system prompt se enriquece con SurgicalMemory + GlobalMemory + Skills automaticamente.
 - Usa mensajes cortos y precisos para cada turno — no repitas contexto.
-- Para tareas simples de un solo turno, usa `/deepseek-code:delegate` en vez de converse.
+- Para tareas simples de un solo turno, usa `/deepseek-code:delegate`.

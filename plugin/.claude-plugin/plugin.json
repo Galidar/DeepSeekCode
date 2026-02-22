@@ -1,7 +1,7 @@
 {
   "name": "deepseek-code",
-  "version": "2.3.0",
-  "description": "Complete multi-agent AI system with Semantic Engine and Intelligence Package. Pure-Python TF-IDF semantic matching replaces keyword heuristics for skill selection. Bayesian inference (Beta distribution) powers memory learning, skill success ranking, and composite risk scoring. Temporal decay (exponential half-life) ensures recent data dominates. Mann-Kendall trend detection finds monotonic patterns in error/duration series. 5 intelligence features: introspective debugging, shadow learning (git diff), git conflict resolution, requirements pipeline, predictive intelligence (Bayesian composite risk with confidence intervals). Plus: V3.2 auto-select model, thinking mode, quantum dual sessions, multi-step plans, semantic memory with relevance search, 51 skills with TF-IDF matching, and 15 MCP tools.",
+  "version": "2.4.0",
+  "description": "Complete multi-agent AI system with Token-Efficient Pipeline, Semantic Engine, and Intelligence Package. v2.4 save_response.py writes DeepSeek output directly to disk via pipe, cutting Claude token usage ~96% on code generation. Pure-Python TF-IDF semantic matching, Bayesian inference (Beta distribution), temporal decay (exponential half-life), Mann-Kendall trend detection. 5 intelligence features: introspective debugging, shadow learning, git conflict resolution, requirements pipeline, predictive intelligence. Plus: V3.2 auto-select model, thinking mode, quantum dual sessions, multi-step plans, semantic memory, 51 skills with TF-IDF matching, and 15 MCP tools.",
   "author": {
     "name": "Galidar"
   },
@@ -46,6 +46,10 @@
     "cosine-similarity",
     "mann-kendall",
     "semantic-skill-matching",
-    "relevance-search"
+    "relevance-search",
+    "token-efficient",
+    "save-response",
+    "pipe-to-disk",
+    "zero-rewrite"
   ]
 }
