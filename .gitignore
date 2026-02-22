@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+*.whl
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# PyInstaller
+*.spec.bak
+installer_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+nul
+
+# Logs
+*.log
+
+# Config local (contiene tokens/cookies)
+config.json
+
+# WASM (se descarga automaticamente)
+*.wasm
+
+# Builds compilados
+DeepSeekCode.exe
+DeepSeekCode_Setup.exe
+installer/payload/DeepSeekCode.exe
+
+# Tests temporales
+test_*.py
+test_*.html
+
+# Claude Code local
+.claude/
+.playwright-mcp/
+
+# Screenshots de juegos (no pertenecen al repo)
+*.png
+
+# Misc
+memory.md
+*.bak
+*.tmp

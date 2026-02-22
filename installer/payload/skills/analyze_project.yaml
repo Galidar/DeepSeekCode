@@ -1,0 +1,66 @@
+name: analyze_project
+description: "Analiza un proyecto o directorio: cuenta archivos, muestra estructura y genera reporte"
+version: "1.0"
+author: "DeepSeek-MCP"
+
+parameters:
+  - name: path
+    description: "Ruta del proyecto o directorio a analizar"
+    required: true
+
+steps:
+  - id: info
+    tool: file_info
+    args:
+      path: "{{ path }}"
+    description: "Obtener informacion general del directorio"
+
+  - id: structure
+    tool: list_directory
+    args:
+      path: "{{ path }}"
+      recursive: false
+      show_dates: true
+    description: "Listar estructura del directorio"
+
+  - id: find_code
+    tool: find_files
+    args:
+      path: "{{ path }}"
+      pattern: "**/*.py"
+      include_size: true
+      max_results: 50
+    description: "Buscar archivos Python"
+    optional: true
+
+  - id: find_js
+    tool: find_files
+    args:
+      path: "{{ path }}"
+      pattern: "**/*.js"
+      include_size: true
+      max_results: 50
+    description: "Buscar archivos JavaScript"
+    optional: true
+
+  - id: report
+    tool: write_file
+    args:
+      path: "{{ path }}/analysis_report.md"
+      content: |
+        # Analisis del Proyecto
+
+        ## Informacion General
+        {{ steps.info.result }}
+
+        ## Estructura
+        {{ steps.structure.result }}
+
+        ## Archivos Python
+        {{ steps.find_code.result }}
+
+        ## Archivos JavaScript
+        {{ steps.find_js.result }}
+    description: "Generar reporte de analisis"
+
+output: "Reporte generado en {{ path }}/analysis_report.md"

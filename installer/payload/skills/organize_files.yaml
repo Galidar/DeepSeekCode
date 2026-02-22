@@ -1,0 +1,41 @@
+name: organize_files
+description: "Organiza archivos de un directorio en subcarpetas por extension"
+version: "1.0"
+author: "DeepSeek-MCP"
+
+parameters:
+  - name: path
+    description: "Ruta del directorio a organizar"
+    required: true
+
+steps:
+  - id: scan
+    tool: list_directory
+    args:
+      path: "{{ path }}"
+      recursive: false
+      show_dates: false
+    description: "Escanear archivos del directorio"
+
+  - id: create_docs
+    tool: make_directory
+    args:
+      path: "{{ path }}/Documentos"
+    description: "Crear carpeta Documentos"
+    optional: true
+
+  - id: create_images
+    tool: make_directory
+    args:
+      path: "{{ path }}/Imagenes"
+    description: "Crear carpeta Imagenes"
+    optional: true
+
+  - id: create_code
+    tool: make_directory
+    args:
+      path: "{{ path }}/Codigo"
+    description: "Crear carpeta Codigo"
+    optional: true
+
+output: "Carpetas creadas en {{ path }}. Usa el agente (/agent) para mover los archivos automaticamente."
