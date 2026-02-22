@@ -131,3 +131,61 @@ class TestSkillInjectorIntegration:
         assert mod._semantic_index is not None
         # Restore
         mod._semantic_index = old_idx
+
+
+class TestHybridScoring:
+    """Tests para verificar que el scoring hibrido resuelve falsos positivos."""
+
+    def test_platformer_canvas_no_json_canvas(self):
+        """json-canvas (Obsidian) NO debe aparecer para queries de juegos canvas 2d."""
+        from deepseek_code.skills.skill_injector import detect_relevant_skills
+        results = detect_relevant_skills(
+            "crear un platformer con canvas 2d y colisiones"
+        )
+        assert "json-canvas" not in results
+        assert "canvas-2d-reference" in results
+
+    def test_platformer_includes_game_skills(self):
+        """Queries de juegos deben incluir physics-simulation y game-genre-patterns."""
+        from deepseek_code.skills.skill_injector import detect_relevant_skills
+        results = detect_relevant_skills(
+            "crear un platformer con canvas 2d y colisiones",
+            max_skills=5,
+        )
+        assert "game-genre-patterns" in results
+        assert "physics-simulation" in results
+
+    def test_non_game_query_unaffected(self):
+        """Queries no-game siguen funcionando correctamente."""
+        from deepseek_code.skills.skill_injector import detect_relevant_skills
+        results = detect_relevant_skills(
+            "backend express mongodb rest api authentication",
+            max_skills=5,
+        )
+        assert "backend-node-patterns" in results
+        assert "database-patterns" in results
+
+    def test_official_skill_creator_not_false_positive(self):
+        """official-skill-creator NO debe aparecer para queries de codigo general."""
+        from deepseek_code.skills.skill_injector import detect_relevant_skills
+        results = detect_relevant_skills(
+            "crear un platformer con canvas 2d y colisiones"
+        )
+        assert "official-skill-creator" not in results
+
+    def test_compute_keyword_scores_game_bonus(self):
+        """El game bonus debe aplicarse cuando hay keywords de juegos."""
+        from deepseek_code.skills.skill_injector import _compute_keyword_scores
+        scores = _compute_keyword_scores(
+            "crear un platformer con canvas 2d", set()
+        )
+        # physics-simulation debe tener score > 0 por el game bonus
+        # aunque "physics" no esta en el query
+        assert scores.get("physics-simulation", 0) > 0
+
+    def test_compute_tfidf_scores_returns_dict(self):
+        """_compute_tfidf_scores debe retornar dict, no lista."""
+        from deepseek_code.skills.skill_injector import _compute_tfidf_scores
+        scores = _compute_tfidf_scores("canvas 2d draw", set())
+        assert isinstance(scores, dict)
+        assert all(isinstance(v, float) for v in scores.values())

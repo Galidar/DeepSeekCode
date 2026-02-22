@@ -51,14 +51,44 @@ def _get_semantic_index():
     return _semantic_index
 
 
+def _compute_tfidf_scores(
+    message: str,
+    exclude_set: set,
+    top_k: int = 15,
+) -> Dict[str, float]:
+    """Calcula scores TF-IDF para el mensaje dado.
+
+    Returns:
+        Dict de {skill_name: cosine_similarity}. Vacio si el indice falla.
+    """
+    try:
+        idx = _get_semantic_index()
+        results = idx.search(message, top_k=top_k)
+        return {
+            name: score
+            for name, score in results
+            if name not in exclude_set and score > 0.0
+        }
+    except Exception:
+        return {}
+
+
+# --- Configuracion del scoring hibrido ---
+_TFIDF_WEIGHT = 0.35
+_KEYWORD_WEIGHT = 0.65
+_HYBRID_THRESHOLD = 0.08
+
+
 def detect_relevant_skills(
     message: str,
     max_skills: int = 5,
     exclude: List[str] = None
 ) -> List[str]:
-    """Detecta skills relevantes usando matching semantico TF-IDF.
+    """Detecta skills relevantes usando scoring hibrido TF-IDF + keywords.
 
-    Flujo: semantic search -> filtrar excluidos -> fallback a keywords si vacio.
+    Combina ambas fuentes de scoring para evitar que TF-IDF introduzca
+    falsos positivos (ej: json-canvas por queries de HTML Canvas) y para
+    que el bonus de contexto de juegos siempre se aplique.
 
     Args:
         message: Mensaje del usuario
@@ -66,37 +96,48 @@ def detect_relevant_skills(
         exclude: Skills a excluir (ej: core skills ya cargados)
 
     Returns:
-        Lista de nombres de skills ordenados por relevancia
+        Lista de nombres de skills ordenados por relevancia hibrida
     """
     exclude_set = set(exclude or [])
 
-    # Try semantic matching first
-    try:
-        idx = _get_semantic_index()
-        results = idx.search(message, top_k=max_skills + len(exclude_set))
-        semantic_names = [name for name, score in results
-                         if name not in exclude_set and score > 0.05][:max_skills]
-        if semantic_names:
-            return semantic_names
-    except Exception:
-        pass  # Fallback to keywords on any error
+    # Siempre calcular AMBAS fuentes de scoring
+    tfidf_scores = _compute_tfidf_scores(message, exclude_set)
+    kw_scores = _compute_keyword_scores(message, exclude_set)
 
-    # Fallback to keyword matching
-    return _keyword_fallback(message, max_skills, exclude)
+    # Normalizar keyword scores a rango 0-1
+    max_kw = max(kw_scores.values()) if kw_scores else 1.0
+    kw_normalized = {
+        k: v / max_kw for k, v in kw_scores.items()
+    } if max_kw > 0 else {}
+
+    # Combinar: keywords tienen mas peso (curadas manualmente + game bonus)
+    all_names = set(tfidf_scores) | set(kw_normalized)
+    combined = {}
+    for name in all_names:
+        t = tfidf_scores.get(name, 0.0)
+        k = kw_normalized.get(name, 0.0)
+        combined[name] = _TFIDF_WEIGHT * t + _KEYWORD_WEIGHT * k
+
+    # Filtrar por threshold y ordenar
+    results = [(n, s) for n, s in combined.items() if s > _HYBRID_THRESHOLD]
+    results.sort(key=lambda x: -x[1])
+    return [name for name, _ in results[:max_skills]]
 
 
-def _keyword_fallback(
+def _compute_keyword_scores(
     message: str,
-    max_skills: int = 5,
-    exclude: List[str] = None
-) -> List[str]:
-    """Fallback: detecta skills por keyword matching clasico.
+    exclude_set: set,
+) -> Dict[str, float]:
+    """Calcula scores de keyword matching con bonus de contexto de juegos.
 
-    Preserva la logica original de SKILL_KEYWORD_MAP + game context bonus.
+    Retorna scores crudos sin ordenar ni limitar — util para combinar
+    con TF-IDF en el scoring hibrido.
+
+    Returns:
+        Dict de {skill_name: score_numerico}
     """
     normalized = _normalize_text(message)
-    scores: Dict[str, int] = {}
-    exclude_set = set(exclude or [])
+    scores: Dict[str, float] = {}
 
     for skill_name, keywords in SKILL_KEYWORD_MAP.items():
         if skill_name in exclude_set:
@@ -107,7 +148,7 @@ def _keyword_fallback(
             if kw_norm in normalized:
                 score += len(kw_norm)
         if score > 0:
-            scores[skill_name] = score
+            scores[skill_name] = float(score)
 
     # Bonus por contexto de juegos
     is_game_context = any(
@@ -116,8 +157,22 @@ def _keyword_fallback(
     if is_game_context:
         for skill_name in GAME_SKILLS:
             if skill_name not in exclude_set:
-                scores[skill_name] = scores.get(skill_name, 0) + 20
+                scores[skill_name] = scores.get(skill_name, 0) + 20.0
 
+    return scores
+
+
+def _keyword_fallback(
+    message: str,
+    max_skills: int = 5,
+    exclude: List[str] = None
+) -> List[str]:
+    """Fallback: detecta skills por keyword matching clasico.
+
+    Wrapper retrocompatible sobre _compute_keyword_scores.
+    """
+    exclude_set = set(exclude or [])
+    scores = _compute_keyword_scores(message, exclude_set)
     sorted_skills = sorted(scores.items(), key=lambda x: -x[1])
     return [name for name, _ in sorted_skills[:max_skills]]
 
