@@ -76,7 +76,6 @@ def _run_multi_inner(
     from deepseek_code.quantum.multi_session import MultiSession
     from deepseek_code.quantum.roles import get_preset, RoleType
     from deepseek_code.client.prompt_builder import assemble_delegate_prompt
-    from deepseek_code.skills.skill_injector import build_delegate_skills_context
     from deepseek_code.agent.prompts import build_delegate_prompt
 
     config = load_config(config_path)
@@ -126,27 +125,34 @@ def _run_multi_inner(
         is_complex=True,
     )
 
-    # SurgicalMemory + GlobalMemory
-    from deepseek_code.surgical.integration import pre_delegation, post_delegation
+    # SessionOrchestrator detecta inyecciones (skills, surgical, global)
+    from deepseek_code.sessions.session_orchestrator import SessionOrchestrator
+    from deepseek_code.client.session_chat import get_session_store
+    from deepseek_code.surgical.integration import post_delegation
     from deepseek_code.global_memory.global_integration import (
-        global_pre_delegation, global_post_delegation,
-        get_injected_skill_names, detect_project_name,
+        global_post_delegation, get_injected_skill_names, detect_project_name,
     )
 
-    surgical_briefing, surgical_store = pre_delegation(
-        APPDATA_DIR, task, template_path=template_path,
-    )
-    global_briefing, global_store = global_pre_delegation(APPDATA_DIR, task)
-
-    # Skills adaptivas
     skills_dir = config.get("skills_dir", SKILLS_DIR)
-    has_errors = bool(surgical_store and surgical_store.data.get("error_log"))
-    skills_extra = build_delegate_skills_context(
-        skills_dir, task, task_level="delegation",
-        has_recurring_errors=has_errors,
+    appdata_dir = config.get("_appdata_dir", APPDATA_DIR)
+    task_text = task + (" " + template[:500] if template else "")
+
+    orchestrator = SessionOrchestrator(
+        get_session_store(), skills_dir=skills_dir, appdata_dir=appdata_dir,
+    )
+    call_params = orchestrator.prepare_session_call(
+        mode="multi-step", identifier=f"multi_{roles_preset}",
+        user_message=task, base_system_prompt=base_system,
+        task_text=task_text, template_path=template_path,
     )
 
-    enriched_system = base_system + skills_extra + surgical_briefing + global_briefing
+    surgical_store = call_params.get("surgical_store")
+    global_store = call_params.get("global_store")
+
+    # Multi es stateless (N clientes paralelos): reconstruir enriched_system
+    enriched_system = base_system
+    for inj in (call_params.get("pending_injections") or []):
+        enriched_system += f"\n{inj['content']}"
 
     # Construir prompt de tarea
     task_prompt = build_delegate_prompt(task, template=template)

@@ -82,7 +82,6 @@ def _run_quantum_inner(
     from deepseek_code.quantum.merge_engine import merge_responses
     from deepseek_code.agent.prompts import build_delegate_prompt
     from deepseek_code.client.prompt_builder import assemble_delegate_prompt
-    from deepseek_code.skills.skill_injector import build_delegate_skills_context
 
     config = load_config(config_path)
     if not check_credentials(config):
@@ -124,33 +123,40 @@ def _run_quantum_inner(
 
     # System prompt modular: bloques QUANTUM incluidos, sin bloques innecesarios
     from cli.config_loader import APPDATA_DIR
+    from deepseek_code.sessions.session_orchestrator import SessionOrchestrator
+    from deepseek_code.client.session_chat import get_session_store
+    from deepseek_code.surgical.integration import post_delegation
+    from deepseek_code.global_memory.global_integration import (
+        global_post_delegation, get_injected_skill_names, detect_project_name,
+    )
+
     quantum_base = assemble_delegate_prompt(
         has_template=template is not None,
         is_quantum=True,
         is_complex=True,
     )
 
-    # SurgicalMemory: inyectar contexto del proyecto
-    from deepseek_code.surgical.integration import pre_delegation, post_delegation
-    surgical_briefing, surgical_store = pre_delegation(
-        APPDATA_DIR, task,
-        template_path=template_path,
-    )
-    # GlobalMemory: inyectar perfil personal cross-proyecto
-    from deepseek_code.global_memory.global_integration import (
-        global_pre_delegation, global_post_delegation,
-        get_injected_skill_names, detect_project_name,
-    )
-    global_briefing, global_store = global_pre_delegation(APPDATA_DIR, task)
-
-    # Skills adaptivas (solo domain relevantes, no Core Skills ciegos)
+    # SessionOrchestrator detecta inyecciones (skills, surgical, global)
     skills_dir = config.get("skills_dir", SKILLS_DIR)
-    has_errors = bool(surgical_store and surgical_store.data.get("error_log"))
-    skills_extra = build_delegate_skills_context(
-        skills_dir, task, task_level="delegation",
-        has_recurring_errors=has_errors,
+    appdata_dir = config.get("_appdata_dir", APPDATA_DIR)
+    task_text = task + (" " + template[:500] if template else "")
+
+    orchestrator = SessionOrchestrator(
+        get_session_store(), skills_dir=skills_dir, appdata_dir=appdata_dir,
     )
-    base_system = quantum_base + skills_extra + surgical_briefing + global_briefing
+    call_params = orchestrator.prepare_session_call(
+        mode="quantum", identifier=f"quantum_{angle_names or 'auto'}",
+        user_message=task, base_system_prompt=quantum_base,
+        task_text=task_text, template_path=template_path,
+    )
+
+    surgical_store = call_params.get("surgical_store")
+    global_store = call_params.get("global_store")
+
+    # Quantum es stateless (2 clientes paralelos): reconstruir enriched_system
+    base_system = quantum_base
+    for inj in (call_params.get("pending_injections") or []):
+        base_system += f"\n{inj['content']}"
 
     sys_a = build_angle_system_prompt(base_system, angle_a, task, template)
     sys_b = build_angle_system_prompt(base_system, angle_b, task, template)
