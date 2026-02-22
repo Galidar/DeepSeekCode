@@ -2,7 +2,7 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:4F46E5,50:7C3AED,100:E87E04&height=230&section=header&text=DeepSeek%20Code&fontSize=70&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=The%20AI-to-AI%20Collaboration%20Revolution&descSize=20&descAlignY=55&descAlign=50" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+128K+%2B+200K+Tokens.+Zero+Wasted+Context.;Learns+from+your+corrections.+Predicts+your+problems.;Free+code+generation+with+self-evolving+intelligence.)](https://github.com/Galidar/DeepSeekCode)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+128K+%2B+200K+Tokens.+Zero+Wasted+Context.;Semantic+Engine%3A+TF-IDF+%2B+Bayesian+%2B+Temporal+Decay.;Free+code+generation+with+self-evolving+intelligence.)](https://github.com/Galidar/DeepSeekCode)
 
 <br><br>
 
@@ -19,6 +19,8 @@
 ![i18n](https://img.shields.io/badge/i18n-EN_|_ES_|_JA-00B894?style=for-the-badge&logo=googletranslate&logoColor=white)
 &nbsp;
 ![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
+&nbsp;
+![Semantic](https://img.shields.io/badge/Semantic_Engine-TF--IDF_|_Bayesian-9333EA?style=for-the-badge)
 &nbsp;
 ![License](https://img.shields.io/badge/License-AGPL--3.0-374151?style=for-the-badge)
 
@@ -151,7 +153,7 @@ graph TB
     CV --> DS
 
     DS --> TOOLS["🔧 15 MCP Tools<br/>read · write · edit · run · resolve conflicts"]
-    DS --> SKILLS["📚 51 Skills<br/>auto-injected by 46-keyword map"]
+    DS --> SKILLS["📚 51 Skills<br/>TF-IDF semantic matching + Bayesian boost"]
     DS --> MEM["🧬 Dual Memory<br/>surgical per-project + global cross-project"]
     DS --> INTEL["🔮 Intelligence Package<br/>shadow learning · debugging · prediction"]
     DS --> AGENT["🤖 Autonomous Agent<br/>up to 100 self-correcting steps"]
@@ -201,18 +203,18 @@ All sandboxed with configurable `allowed_paths` and `allowed_commands`.
 
 <br>
 
-## 51 Skills That Inject Automatically
+## 51 Skills — Semantic TF-IDF Matching
 
-DeepSeek Code carries **51 specialized knowledge files** (49 `.skill` + 2 `.yaml` workflows) covering everything from SOLID principles to Canvas-2D physics to procedural generation. They're organized in three tiers with an 80K token budget:
+DeepSeek Code carries **51 specialized knowledge files** (49 `.skill` + 2 `.yaml` workflows) covering everything from SOLID principles to Canvas-2D physics to procedural generation. Skills are now selected by **TF-IDF cosine similarity** (not just keywords), with Bayesian success-rate boosting from GlobalMemory. They're organized in three tiers with an 80K token budget:
 
 <div align="center">
 
 ```mermaid
 graph LR
-    TASK["📝 Your task description"] -->|"keyword scan"| MAP["🗺️ 46-entry keyword map"]
+    TASK["📝 Your task description"] -->|"TF-IDF vectorize"| MAP["🧠 Semantic Skill Index<br/>cosine similarity + Bayesian boost"]
 
     MAP -->|"always loaded"| CORE["🔵 Core Skills — 15K tokens<br/>SOLID, clean-code, error-handling,<br/>security, advanced-coding"]
-    MAP -->|"matched by keywords"| DOMAIN["🟣 Domain Skills — 45K tokens<br/>canvas-2d, physics-engine,<br/>game-genre, web-audio-api..."]
+    MAP -->|"top-K by similarity"| DOMAIN["🟣 Domain Skills — 45K tokens<br/>canvas-2d, physics-engine,<br/>game-genre, web-audio-api..."]
     MAP -->|"if budget remains"| SPEC["🟡 Specialist Skills — 20K tokens<br/>procedural-generation,<br/>multiplayer-sync, shaders..."]
 
     CORE --> PROMPT["⚡ Enriched prompt<br/>up to 80K of domain knowledge"]
@@ -229,7 +231,7 @@ graph LR
 
 </div>
 
-You don't pick skills manually. A **46-entry keyword map** matches your task description to the right knowledge automatically. Ask to "build a platformer with physics" and it injects `canvas-2d`, `physics-engine`, `game-genre`, and `procedural-generation` — without you doing anything.
+You don't pick skills manually. A **Semantic Skill Index** (TF-IDF + cosine similarity) matches your task description to the right knowledge automatically. Skills with higher Bayesian success rates get boosted. Ask to "build a platformer with physics" and it injects `canvas-2d`, `physics-engine`, `game-genre`, and `procedural-generation` — without you doing anything. Falls back to keyword matching if needed.
 
 <br>
 
@@ -272,9 +274,9 @@ graph TB
 
 Two memory systems work together:
 
-- **Surgical Memory** — learns errors **per project**. If DeepSeek used `innerHTML` in your project (which your hooks block), it remembers and never does it again. Stores up to 30 errors, 20 history entries, 15 patterns, 20 rules. Injects a 3K token briefing before each delegation.
+- **Surgical Memory** — learns errors **per project** with **semantic relevance search**. Uses `temporal_decay(age) * frequency` to rank entries — recent and frequent data dominates. `find_relevant(query)` searches entries by TF-IDF similarity. Smart compaction purges by relevance instead of FIFO. Stores up to 30 errors, 20 history entries, 15 patterns, 20 rules. Injects a 3K token briefing.
 
-- **Global Memory** — learns patterns **across all your projects**. Tracks your code style preferences, which skills succeed most often, optimal task complexity, preferred modes, and recurring error types. Uses exponential moving averages (α=0.15) to smooth trends. Injects a 2K token briefing.
+- **Global Memory** — learns patterns **across all your projects** with **Bayesian inference**. Each skill gets a `BayesianEstimator(Beta distribution)` with confidence intervals. Cross-project errors use semantic clustering (merge if cosine similarity > 0.6). Compaction uses `temporal_decay * count` weighting. Tracks code style, skill success rates, complexity sweet spots, mode performance, and recurring errors. Injects a 2K token briefing.
 
 Both are fail-safe: if anything goes wrong, they return empty without interrupting your workflow.
 
@@ -336,7 +338,7 @@ graph TB
 | **👁️ Shadow Learning** | Learns from your **manual corrections** automatically | Compares DeepSeek's output with what you actually committed via `git diff`. Detects 7 correction patterns and injects them into future delegations |
 | **🔧 Git Intelligence** | Resolves **merge conflicts** with AI context | MCP tool `resolve_conflicts` with detect/preview/resolve actions. Heuristic fallback + AI resolution with full project context |
 | **📊 Requirements Pipeline** | Converts a **requirements document** into an executable plan | Parses markdown, detects priorities (MUST/SHOULD/COULD) and dependencies, generates topologically-sorted multi-step plans |
-| **🔮 Predictive Intelligence** | Detects **tech debt** and predicts problems before they happen | Scans for files near LOC limits, clusters recurring errors, detects worsening trends, generates health reports with risk levels |
+| **🔮 Predictive Intelligence** | Detects **tech debt** with Bayesian composite risk scoring | Bayesian risk score (0-100) combining failure rates, Mann-Kendall trend slopes, and file/debt indicators. Includes 95% confidence intervals and trend direction analysis |
 
 ```bash
 # Convert requirements doc to executable plan
@@ -480,7 +482,9 @@ Two authentication modes:
 
 ## Also Includes
 
-**🔮 Intelligence Package** — 5 revolutionary features: introspective debugging (root cause analysis), shadow learning (learns from your git corrections), git conflict resolution (AI-powered MCP tool), requirements pipeline (document to plan), predictive intelligence (tech debt detection and health reports).
+**🧠 Semantic Engine** — Pure-Python central engine powering all subsystems. TF-IDF vectorization with bigrams, cosine similarity for semantic matching, Bayesian Beta distribution for confidence-aware learning, exponential temporal decay for time-weighted relevance, and Mann-Kendall trend detection for monotonic pattern analysis. Zero external dependencies.
+
+**🔮 Intelligence Package** — 5 features powered by the Semantic Engine: introspective debugging (root cause analysis), shadow learning (learns from your git corrections), git conflict resolution (AI-powered MCP tool), requirements pipeline (document to plan), predictive intelligence (Bayesian composite risk with confidence intervals).
 
 **🔍 Serena** — Symbolic code navigation with two modes: external `serena-agent` (LSP-powered) or a built-in regex engine that extracts classes, functions, and methods across Python, JavaScript, TypeScript, Java, Go, and Rust.
 
@@ -529,6 +533,6 @@ The plugin includes a 1000+ line knowledge base so Claude knows exactly how to o
 
 **DeepSeek Code** — Two AIs, self-evolving intelligence, free code generation.
 
-Built with 🧠 Claude Code + ⚡ DeepSeek + 🔧 MCP Protocol + 🔮 Intelligence Package
+Built with 🧠 Claude Code + ⚡ DeepSeek + 🔧 MCP Protocol + 🔮 Intelligence Package + 🧬 Semantic Engine
 
 </div>

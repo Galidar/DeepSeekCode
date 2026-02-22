@@ -1,7 +1,7 @@
 {
   "name": "deepseek-code",
-  "version": "2.2.0",
-  "description": "Complete multi-agent AI system with Intelligence Package. 5 revolutionary features: introspective debugging (root cause analysis, not blind retry), shadow learning (learns from your git corrections), git conflict resolution (AI-powered merge), requirements pipeline (document to executable plan), predictive intelligence (tech debt detection, health reports). Plus: V3.2 auto-select model, thinking mode, quantum parallel dual sessions, multi-step plans, surgical + global memory, 51 auto-injected skills, and 15 MCP tools. Claude Code orchestrates DeepSeek as a 128K-token self-learning code engine with free web mode.",
+  "version": "2.3.0",
+  "description": "Complete multi-agent AI system with Semantic Engine and Intelligence Package. Pure-Python TF-IDF semantic matching replaces keyword heuristics for skill selection. Bayesian inference (Beta distribution) powers memory learning, skill success ranking, and composite risk scoring. Temporal decay (exponential half-life) ensures recent data dominates. Mann-Kendall trend detection finds monotonic patterns in error/duration series. 5 intelligence features: introspective debugging, shadow learning (git diff), git conflict resolution, requirements pipeline, predictive intelligence (Bayesian composite risk with confidence intervals). Plus: V3.2 auto-select model, thinking mode, quantum dual sessions, multi-step plans, semantic memory with relevance search, 51 skills with TF-IDF matching, and 15 MCP tools.",
   "author": {
     "name": "Galidar"
   },
@@ -38,6 +38,14 @@
     "requirements-pipeline",
     "predictive-intelligence",
     "health-report",
-    "self-learning"
+    "self-learning",
+    "semantic-engine",
+    "tf-idf",
+    "bayesian-inference",
+    "temporal-decay",
+    "cosine-similarity",
+    "mann-kendall",
+    "semantic-skill-matching",
+    "relevance-search"
   ]
 }

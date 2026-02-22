@@ -13,7 +13,8 @@
 ![Commands](https://img.shields.io/badge/Commands-5-22C55E?style=for-the-badge)
 ![Skills](https://img.shields.io/badge/Knowledge-1000+_lines-F59E0B?style=for-the-badge)
 ![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
-![Version](https://img.shields.io/badge/v2.2.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/v2.3.0-blue?style=for-the-badge)
+![Semantic](https://img.shields.io/badge/Semantic_Engine-TF--IDF_|_Bayesian-9333EA?style=for-the-badge)
 
 <br>
 
@@ -23,7 +24,7 @@
 
 ## What This Plugin Does
 
-This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package** for self-evolving code generation. It includes a comprehensive 1000+ line knowledge base covering every feature, mode, and configuration.
+This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package** and **Semantic Engine** for self-evolving code generation. v2.3 adds a pure-Python Semantic Engine (TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends) that powers skill selection, memory relevance, and predictive risk scoring. It includes a comprehensive 1100+ line knowledge base covering every feature, mode, and configuration.
 
 ```mermaid
 graph LR
@@ -140,6 +141,7 @@ The plugin includes **deepseek-code-mastery** — a comprehensive 1000+ line kno
 | **Skills** | 3-tier injection system (core/domain/specialist, 80K budget) |
 | **Memory** | Surgical (per-project) + Global (cross-project) learning |
 | **🔮 Intelligence** | Introspective debugging, shadow learning, git conflicts, requirements pipeline, health reports |
+| **🧠 Semantic Engine** | TF-IDF vectorization, cosine similarity, Bayesian Beta inference, temporal decay, Mann-Kendall trends, composite risk scoring |
 | **Session** | Web login (PoW/WASM), API keys, health check, multi-account |
 | **i18n** | English, Spanish, Japanese with fallback system |
 | **V3.2** | Auto-select model, thinking mode, smart chunking, scalable pool |
@@ -193,7 +195,7 @@ plugin/
     status.md                /deepseek-code:status command
   skills/
     deepseek-code-mastery/
-      SKILL.md               Complete knowledge base (~1000 lines)
+      SKILL.md               Complete knowledge base (~1100 lines)
   README.md                  This file
 ```
 
@@ -203,7 +205,7 @@ plugin/
 
 <br>
 
-**DeepSeek Code Plugin v2.2** — Self-evolving AI-to-AI collaboration inside Claude Code.
+**DeepSeek Code Plugin v2.3** — Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
 
 <br>
 

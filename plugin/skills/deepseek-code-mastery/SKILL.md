@@ -1,6 +1,6 @@
 ---
 name: deepseek-code-mastery
-description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.2 incluye Intelligence Package con 5 features revolucionarias — introspective debugging (root cause analysis en vez de retry ciego), shadow learning (aprende de correcciones del usuario via git diff), git conflict resolution (AI-powered merge con MCP tool), requirements pipeline (documento a plan ejecutable), predictive intelligence (deteccion de tech debt y health reports). Plus V3.2 auto-select model, thinking mode, smart chunking, 15 MCP tools, dual quantum sessions, multi-step, surgical + global memory, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
+description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.3 incluye Semantic Engine central (TF-IDF puro Python, cosine similarity, Bayesian Beta inference, temporal decay, Mann-Kendall trend detection) que potencia todos los subsistemas. Skills ahora se seleccionan por similaridad semantica TF-IDF (no solo keywords). Memoria usa temporal decay + frecuencia para relevancia, busqueda semantica find_relevant(), y compactacion inteligente. GlobalMemory con Bayesian success rates y clustering semantico de errores. Predictive Intelligence con Bayesian composite risk (0-100), confidence intervals, y trend slopes. Plus Intelligence Package (5 features), V3.2 auto-select model, thinking mode, smart chunking, 15 MCP tools, dual quantum sessions, multi-step, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
 ---
 
 # DeepSeek Code Mastery — Guia Completa para Claude Code
@@ -423,6 +423,18 @@ funciona bien. `deepseek-reasoner` da hasta 64K output (incluyendo chain-of-thou
 
 **Otros:** claude-delegate, project-architecture, code-review-excellence, audit-website, launch-strategy, remotion-best-practices, json-canvas, document-chat-interface, official-skill-creator, skill-judge, apollo-mcp-server, cloudflare-mcp-server, audiocraft-audio-generation, manaseed-integration, rivetkit-client-javascript, ue57-rhi-api-migration, create-design-system-rules, custom-web-artifacts-builder, advanced-coding
 
+### Seleccion Semantica de Skills (v2.3)
+
+A partir de v2.3, la seleccion de skills usa **TF-IDF cosine similarity** como metodo primario:
+
+1. `SemanticSkillIndex` vectoriza las descripciones de las 46 skills del keyword map
+2. La tarea del usuario se vectoriza con el mismo TFIDFVectorizer
+3. Se calculan cosine similarities y se ranquean las top-K skills
+4. Si hay historial en GlobalMemory, `search_with_boost()` multiplica similarity * bayesian_success_rate
+5. Si TF-IDF no encuentra resultados, fallback al keyword map original
+
+Esto permite que tareas como "construir interfaz responsive" matcheen con `css-modern-patterns` aunque no contengan keywords exactos.
+
 ### Crear Skills Nuevas
 
 Las skills son archivos `.skill` (ZIP conteniendo `SKILL.md` con frontmatter YAML).
@@ -432,6 +444,7 @@ Para crear una nueva:
 2. Empaquetar como ZIP renombrando a `.skill`
 3. Colocar en `<DEEPSEEK_DIR>/skills/`
 4. Agregar keywords en `src/deepseek_code/skills/skill_constants.py` -> `SKILL_KEYWORD_MAP`
+5. El SemanticSkillIndex se reconstruye automaticamente al siguiente uso
 
 ---
 
@@ -457,6 +470,18 @@ DESPUES de delegar:
     2. Registra en historial: tarea, modo, exito, duracion
     3. Guarda store actualizado a disco
 ```
+
+**Busqueda Semantica (v2.3):**
+```python
+# find_relevant(query, section, top_k) — busca entradas relevantes por TF-IDF
+store.find_relevant("error innerHTML", "error_log", top_k=5)
+# → retorna las 5 entradas mas semanticamente similares a la query
+# Fallback Jaccard para corpus <5 entradas
+```
+
+**Compactacion Inteligente (v2.3):**
+- `error_log` y `failure_analyses` ahora se ordenan por `relevance = temporal_decay(age) * (1 + 0.1*(freq-1))`
+- Entradas recientes y frecuentes sobreviven; antiguas e infrecuentes se purgan primero
 
 **Almacenamiento:**
 ```
@@ -504,9 +529,20 @@ RENDIMIENTO POR MODO:
 
 **Almacenamiento:** `%APPDATA%\DeepSeek-Code\global_memory.json` (unico archivo)
 
+**Bayesian Skill Ranking (v2.3):**
+- Cada skill stat ahora incluye `bayesian_mean`, `bayesian_ci_lower`, `bayesian_ci_upper`
+- Calculado via `BayesianEstimator(alpha=successes+1, beta=failures+1)`
+- Con 2 exitos de 3 intentos: mean=0.6, CI 95%=[0.19, 1.0] (alta incertidumbre)
+- Con 20 exitos de 25: mean=0.78, CI 95%=[0.61, 0.95] (confianza alta)
+
+**Semantic Error Clustering (v2.3):**
+- `add_cross_error()` ahora compara nuevos errores con existentes via cosine similarity
+- Si similarity > 0.6, merge en vez de crear nueva entrada (reduce duplicados semanticos)
+
 **Compactacion automatica:**
 - Max 30 skill combos, max 20 cross-project errors, max 50 task keywords
 - Purga skills con <2 inyecciones y >90 dias sin uso
+- Cross-project errors ordenados por `temporal_decay(age, half_life=60) * count`
 
 ### Orden de inyeccion en system prompt
 
@@ -690,6 +726,11 @@ Detecta:
 - **Tech debt trends**: failure_rate creciente, duracion aumentando, errores repetidos
 - **Risk level**: healthy / warning / critical con recomendaciones priorizadas
 
+**Bayesian Composite Risk (v2.3):**
+- `bayesian_risk_score` (0-100): 50% failure rate + 20% trend severity + 30% file/debt risks
+- `confidence_intervals`: CI 95% para delegation success rate via Beta posterior
+- `trend_slopes`: Mann-Kendall trend direction para duration y error frequency series
+
 ### Orden de Inyeccion Actualizado (v2.2)
 
 ```
@@ -703,6 +744,67 @@ DELEGATE_SYSTEM_PROMPT       (~7K tokens, base)
 El briefing de SurgicalMemory ahora incluye seccion 5.5 "Intelligence Data":
 - Shadow corrections aprendidas (frecuencia >= 2)
 - Reglas de prevencion de failure analyses
+
+---
+
+## 8.7. Semantic Engine (v2.3) — Motor Central de Inteligencia
+
+El Semantic Engine es un modulo **100% Python puro** (zero dependencies) que reemplaza heuristicas basicas con algoritmos reales. Todos los subsistemas lo consumen.
+
+### Componentes del Engine
+
+| Componente | Algoritmo | Uso |
+|:----------:|:---------:|:----|
+| **TFIDFVectorizer** | TF-IDF con sparse dicts | Vectoriza texto para similaridad semantica |
+| **cosine_similarity** | Dot product / magnitudes | Compara vectores TF-IDF (0.0=nada, 1.0=identico) |
+| **BayesianEstimator** | Beta(alpha, beta) | Modela exito/fallo con intervalos de confianza |
+| **temporal_decay** | `e^(-ln(2) * age/half_life)` | Peso exponencial por edad (reciente > antiguo) |
+| **mann_kendall_trend** | Pares concordantes/discordantes | Detecta tendencias monotonicas en series |
+| **weighted_score** | Ponderacion multi-factor | Combina metricas con pesos configurables |
+
+### Tokenizacion
+
+```
+Input: "sistema de inventario drag-and-drop"
+→ lowercase + strip accents
+→ unigrams: ["sistema", "de", "inventario", "drag", "and", "drop"]
+→ bigrams: ["sistema_de", "de_inventario", "inventario_drag", ...]
+→ TF-IDF vector (sparse dict)
+```
+
+### Impacto en Subsistemas
+
+**Skills (SemanticSkillIndex):**
+- Antes: 46-entry keyword map (match exacto)
+- Ahora: TF-IDF cosine similarity sobre descripciones de skills
+- `search_with_boost()`: similaridad * bayesian_success_rate (skills con historial de exito suben)
+- Fallback a keywords si TF-IDF no encuentra resultados
+
+**SurgicalMemory (find_relevant):**
+- Antes: FIFO (primero-entra-ultimo-sale)
+- Ahora: `relevance = temporal_decay(age) * (1 + 0.1*(freq-1))`
+- `find_relevant(query, section)`: busqueda TF-IDF sobre entradas de memoria
+- Compactacion: ordena por relevancia en vez de FIFO
+- Fallback Jaccard para corpus pequeños (<5 entradas)
+
+**GlobalMemory (Bayesian):**
+- Skill stats: `BayesianEstimator.from_stats(successes, total)` → mean, CI 95%
+- Error clustering: merge semantico si cosine_similarity > 0.6
+- Compactacion: `temporal_decay(age, half_life=60) * count`
+
+**Predictive Intelligence (Bayesian composite risk):**
+- `composite_risk = 0.5*failure_rate + 0.2*trend_severity + 0.3*file_debt_risks` (0-100)
+- Confidence intervals via normal approximation del Beta posterior
+- Mann-Kendall trend slopes para delegation duration y error frequency
+- HealthReport ahora incluye: `bayesian_risk_score`, `confidence_intervals`, `trend_slopes`
+
+### Archivos del Semantic Engine
+
+```
+src/deepseek_code/intelligence/semantic_engine.py  (258 LOC) — Motor central
+src/deepseek_code/intelligence/predictor_bayesian.py (145 LOC) — Helper Bayesiano
+src/deepseek_code/skills/semantic_skill_index.py   (104 LOC) — Indice semantico de skills
+```
 
 ---
 
@@ -873,8 +975,9 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 │       │   └── prompts.py           # DELEGATE_SYSTEM_PROMPT, build_delegate_prompt()
 │       ├── skills\
 │       │   ├── loader.py            # SkillLoader (cache + load_multiple)
-│       │   ├── skill_injector.py    # build_delegate_skills_context() 3-tier
-│       │   └── skill_constants.py   # CORE_SKILLS, SKILL_KEYWORD_MAP, budgets
+│       │   ├── skill_injector.py    # build_delegate_skills_context() 3-tier + semantic
+│       │   ├── skill_constants.py   # CORE_SKILLS, SKILL_KEYWORD_MAP, budgets
+│       │   └── semantic_skill_index.py # v2.3: TF-IDF semantic skill matching
 │       ├── quantum\
 │       │   ├── dual_session.py      # DualSession.parallel_chat()
 │       │   ├── angle_detector.py    # Auto-deteccion de angulos
@@ -897,6 +1000,8 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 │       │   ├── bridge_utils.py      # Utilidades compartidas
 │       │   └── delegate_validator.py # Validacion de respuestas
 │       ├── intelligence\
+│       │   ├── semantic_engine.py   # v2.3: Motor central (TF-IDF, Bayesian, decay)
+│       │   ├── predictor_bayesian.py # v2.3: Composite risk, trends, confidence
 │       │   ├── debugger.py          # Introspective debugging (root cause analysis)
 │       │   ├── shadow_learner.py    # Shadow learning (git diff corrections)
 │       │   ├── git_intel.py         # Git intelligence (conflict resolution)
