@@ -961,14 +961,19 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 │   │   ├── commands.py              # Router for /skills, /agent, /serena
 │   │   ├── commands_helpers.py      # Helpers: /login, /health, /account, knowledge_skill
 │   │   ├── config_loader.py         # load_config(), APPDATA_DIR, SKILLS_DIR
+│   │   ├── session_commands.py      # v2.5: /new, /chats, /switch, /close
+│   │   ├── chat_manager.py          # v2.5: Chat lifecycle management
 │   │   ├── onboarding.py            # First-time wizard with language selector
 │   │   └── ui_theme.py              # Terminal UI rendering
 │   └── deepseek_code\
 │       ├── client\
 │       │   ├── deepseek_client.py   # DeepSeekCodeClient (web + API)
+│       │   ├── session_chat.py      # v2.5: chat_in_session() + Phase 3 sanitization
 │       │   ├── api_caller.py        # Auto-select model, max_tokens, build_api_params
+│       │   ├── ai_protocol.py       # AI-to-AI protocol (negotiate, briefing, review)
 │       │   ├── task_classifier.py   # TaskLevel enum, classify_task()
 │       │   ├── prompt_builder.py    # Build adaptive system prompts
+│       │   ├── context_manager.py   # Token estimation + progressive summarization
 │       │   └── template_chunker.py  # Smart chunking por TODOs/lineas
 │       ├── agent\
 │       │   ├── engine.py            # AgentEngine (loop autonomo)
@@ -999,6 +1004,12 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 │       ├── delegate\
 │       │   ├── bridge_utils.py      # Utilidades compartidas
 │       │   └── delegate_validator.py # Validacion de respuestas
+│       ├── sessions\                # v2.5-2.6: Sesiones persistentes
+│       │   ├── session_store.py     # SessionStore + ChatSession (JSON persistente)
+│       │   ├── session_namespace.py # build_session_name(), slugify(), parse_session_name()
+│       │   ├── session_orchestrator.py # SessionOrchestrator (3-phase flow)
+│       │   ├── summary_engine.py    # Auto-summary + topic extraction
+│       │   └── knowledge_transfer.py # Cross-session knowledge transfer
 │       ├── intelligence\
 │       │   ├── semantic_engine.py   # v2.3: Motor central (TF-IDF, Bayesian, decay)
 │       │   ├── predictor_bayesian.py # v2.3: Composite risk, trends, confidence
@@ -1237,6 +1248,125 @@ python run.py                            # Interactivo
 --requirements X      # v2.2: Documento de requisitos
 --auto-execute        # v2.2: Ejecutar plan auto-generado
 --health-report       # v2.2: Reporte de salud predictivo
+```
+
+---
+
+## 13c. Sesiones Persistentes y Knowledge Transfer (v2.5-v2.6)
+
+### Concepto Central
+
+Cada chat con DeepSeek es una **sesion** con nombre, ID persistente y estado. El Session Orchestrator envia el system prompt y skills SOLO la primera vez (Phase 1/2), luego reutiliza el chat existente — ahorrando ~99.8% de tokens en llamadas subsecuentes.
+
+### Arquitectura de 3 Fases
+
+```
+Phase 1: System prompt → DeepSeek responde "OK" (SOLO primera vez)
+Phase 2: Inyecciones (skills, memoria, knowledge) → cada una con ACK rastreado
+Phase 3: Mensaje del usuario LIMPIO (sin instrucciones de acknowledgment)
+```
+
+**REGLA CRITICA:** Phase 3 NUNCA debe contener frases como "di solo OK" o "responde unicamente OK". El sistema sanitiza automaticamente estas frases si se detectan.
+
+### SessionStore — Persistencia
+
+```python
+# Modulo: deepseek_code.sessions.session_store
+store = SessionStore(path)           # Carga/crea archivo JSON
+session = store.create(name, chat_id) # Nueva sesion
+session = store.get(name)            # Recuperar sesion existente
+store.update(name, parent_message_id=N, add_context='skill:X')
+store.update_summary(name, topic='JWT Auth', summary='Designed login')
+store.close(name)                    # Cerrar sesion
+store.close_all()                    # Cerrar todas
+digest = store.get_session_digest(name) # Resumen para routing
+```
+
+Campos clave de `ChatSession`:
+- `chat_session_id`: ID del chat en DeepSeek
+- `parent_message_id`: Encadena mensajes (2 → 4 → 6...)
+- `mode`: delegate | converse | quantum
+- `injected_contexts`: Set de contextos ya inyectados
+- `message_count`: Contador de mensajes enviados
+- `topic`, `summary`: Auto-generados para routing inteligente
+
+### Session Namespace
+
+```python
+# Modulo: deepseek_code.sessions.session_namespace
+build_session_name('delegate', 'auth-module')  # → 'delegate:auth-module'
+parse_session_name('delegate:auth-module')      # → ('delegate', 'auth-module', 'delegate:auth-module')
+slugify('My Task Name!')                        # → 'my-task-name'
+```
+
+### Knowledge Transfer (v2.6)
+
+Permite transferir conocimiento entre sesiones sin re-enviar todo el contexto:
+
+```python
+# Modulo: deepseek_code.sessions.knowledge_transfer
+knowledge = extract_knowledge(store, 'delegate:source')
+transferable = list_transferable_sessions(store)
+injection = transfer_knowledge(store, 'delegate:source', 'converse:target')
+# injection = {'type': 'knowledge', 'content': '...', ...}
+```
+
+Tracking bidireccional:
+- `session.knowledge_sent_to` — lista de sesiones a las que envio conocimiento
+- `session.knowledge_received_from` — lista de sesiones de las que recibio
+
+### Session Orchestrator (v2.6)
+
+Orquesta todo el flujo de sesiones:
+
+```python
+# Modulo: deepseek_code.sessions.session_orchestrator
+orch = SessionOrchestrator(store, skills_dir, appdata_dir)
+call = orch.prepare_session_call(
+    mode='delegate', identifier='auth',
+    user_message='create login', base_system_prompt='...',
+    task_text='create login form'
+)
+# call = {session_name, system_prompt, pending_injections, ...}
+routing = orch.get_routing_digest()
+# routing = {active_sessions: [...], ...}
+```
+
+### Summary Engine
+
+Auto-genera resumenes de sesiones para routing inteligente:
+
+```python
+# Modulo: deepseek_code.sessions.summary_engine
+summary = generate_local_summary(session, user_message, response)
+update_session_summary(store, name, user_msg, response, force=False)
+# Nota: requiere message_count >= 2 a menos que force=True
+```
+
+### CLI de Sesiones
+
+```bash
+# Desde plugin (Claude Code)
+--session "nombre"        # Usar/crear sesion con nombre
+--session-list            # Listar sesiones activas
+--session-close "nombre"  # Cerrar sesion
+--session-close-all       # Cerrar todas
+--session-digest "nombre" # Obtener resumen para routing
+--transfer-from "source"  # Transferir conocimiento de otra sesion
+
+# Desde CLI interactiva
+/new [nombre]    # Crear nuevo chat
+/chats           # Listar chats activos
+/switch <nombre> # Cambiar a otro chat
+/close [nombre]  # Cerrar chat
+```
+
+### Flujo de Token Savings
+
+```
+Primera llamada:  System prompt (~3K tokens) + Skills (~5K) + Task
+Segunda llamada:  Solo Task (~100 tokens) ← 99.8% ahorro
+Tercera llamada:  Solo Task (~100 tokens) ← sesion reutilizada
 ```
 
 ---
