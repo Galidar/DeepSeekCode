@@ -18,6 +18,7 @@ Usage from DeepSeekCodeClient:
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from typing import Optional, List, Dict
@@ -28,6 +29,34 @@ from .web_tool_caller import (
     build_tools_prompt, extract_tool_calls,
     format_tool_result, clean_final_response,
 )
+
+# Patterns that should NEVER appear in Phase 3 (user task) messages.
+# These are acknowledgment instructions meant only for Phase 1/2.
+_PHASE3_STRIP_PATTERNS = [
+    # Spanish variations
+    r',?\s*(?:di|responde|contesta|dime)\s+(?:solo|solamente|unicamente)\s+["\']?OK["\']?\.?',
+    r',?\s*responde\s+unicamente\s*:?\s*["\']?OK["\']?\.?',
+    r',?\s*solo\s+(?:di|responde|contesta)\s+["\']?OK["\']?\.?',
+    # English variations
+    r',?\s*(?:just\s+)?(?:say|respond|reply)\s+(?:only\s+)?["\']?OK["\']?\.?',
+    # Generic "solo OK" / "only OK" at end of message
+    r',?\s+(?:solo|only)\s+["\']?OK["\']?\s*\.?\s*$',
+]
+_PHASE3_RE = re.compile('|'.join(_PHASE3_STRIP_PATTERNS), re.IGNORECASE)
+
+
+def _sanitize_phase3(message: str) -> str:
+    """Remove acknowledgment instructions accidentally appended to task messages.
+
+    AI agents (like Claude Code) sometimes append "di solo OK" or similar
+    phrases when constructing delegate commands.  DeepSeek then literally
+    obeys and responds "OK" instead of executing the task.
+
+    This function strips those patterns so Phase 3 only contains the task.
+    """
+    cleaned = _PHASE3_RE.sub('', message).strip()
+    # If stripping removed everything (edge case), return original
+    return cleaned if cleaned else message
 
 
 def get_session_store_path() -> str:
@@ -185,7 +214,10 @@ async def chat_in_session(
             store.save()
 
     # --- Phase 3: User message (clean) ---
-    prompt = user_message
+    # Sanitize: strip acknowledgment patterns that an AI agent might
+    # accidentally append to the task message (e.g. "di solo OK",
+    # "responde unicamente OK").  These belong in Phase 1/2 only.
+    prompt = _sanitize_phase3(user_message)
 
     # Tool-calling loop
     for step in range(max_steps):

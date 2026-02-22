@@ -9,6 +9,22 @@ Carga y sigue todas las guias de la skill `deepseek-code-mastery` de este plugin
 
 **Tu tarea:** Basandote en "$ARGUMENTS", construye y ejecuta una conversacion multi-turno con DeepSeek.
 
+## REGLA CRITICA: No contaminar mensajes
+
+**NUNCA agregues frases de acknowledgment a los mensajes de conversacion.** El sistema maneja Phase 1/2 internamente. Si escribes:
+
+```
+--converse "Crea la base del sistema, di solo OK"
+```
+
+DeepSeek LITERALMENTE dira "OK" en vez de crear el sistema. Cada mensaje que envias es el **contenido puro** (Phase 3). **PROHIBIDO** agregar:
+- "di solo OK", "responde OK", "solo di OK"
+- "responde unicamente con codigo"
+- "confirma que entendiste"
+- Cualquier instruccion de formato de respuesta
+
+El system prompt, skills y acknowledgments son automaticos. Tu solo envias los mensajes limpios.
+
 ## Proceso Token-Eficiente
 
 **REGLA CRITICA: Nunca uses Write para guardar codigo generado. Siempre usa pipe directo a disco.**

@@ -9,6 +9,22 @@ Carga y sigue todas las guias de la skill `deepseek-code-mastery` de este plugin
 
 **Tu tarea:** Basandote en la solicitud del usuario "$ARGUMENTS", construye y ejecuta el comando de delegacion correcto.
 
+## REGLA CRITICA: No contaminar mensajes de tarea
+
+**NUNCA agregues frases de acknowledgment a la tarea delegada.** El sistema maneja Phase 1/2 internamente. Si escribes:
+
+```
+--delegate "Crea un formulario de login, di solo OK"
+```
+
+DeepSeek LITERALMENTE dira "OK" en vez de crear el formulario. El texto que pasas en `--delegate` es el **mensaje de tarea puro** (Phase 3). **PROHIBIDO** agregar:
+- "di solo OK", "responde OK", "solo di OK"
+- "responde unicamente con codigo"
+- "confirma que entendiste"
+- Cualquier instruccion de formato de respuesta
+
+El system prompt, skills y acknowledgments son automaticos (Phase 1 y Phase 2). Tu solo envias la tarea limpia.
+
 ## Proceso Token-Eficiente
 
 **REGLA CRITICA: Nunca uses Write para guardar el codigo generado por DeepSeek. Siempre usa pipe directo a disco.**
