@@ -2,15 +2,16 @@
 
 Analiza datos de SurgicalMemory y GlobalMemory para detectar tendencias,
 predecir archivos problematicos y generar reportes de salud del proyecto.
-
 No modifica ningun store — es puramente de lectura y analisis.
 """
 
 import os
-import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
+from .predictor_bayesian import (
+    compute_composite_risk, compute_trend_slopes, build_confidence_intervals,
+)
 
 
 @dataclass
@@ -54,6 +55,9 @@ class HealthReport:
     tech_debt_trends: List[TechDebtTrend]
     recommendations: List[str]
     stats: dict = field(default_factory=dict)
+    bayesian_risk_score: float = 0.0
+    confidence_intervals: dict = field(default_factory=dict)
+    trend_slopes: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Serializa a diccionario para JSON output."""
@@ -81,6 +85,9 @@ class HealthReport:
             ],
             "recommendations": self.recommendations,
             "stats": self.stats,
+            "bayesian_risk_score": self.bayesian_risk_score,
+            "confidence_intervals": self.confidence_intervals,
+            "trend_slopes": self.trend_slopes,
         }
 
 
@@ -90,17 +97,7 @@ def generate_health_report(
     project_root: Optional[str] = None,
     line_limit: int = 400,
 ) -> HealthReport:
-    """Genera reporte predictivo de salud del proyecto.
-
-    Args:
-        store_data: Datos del SurgicalStore (dict crudo del JSON)
-        global_data: Datos del GlobalStore (dict crudo del JSON)
-        project_root: Ruta raiz del proyecto para escaneo de archivos
-        line_limit: Limite de lineas por archivo (default 400)
-
-    Returns:
-        HealthReport con riesgos, tendencias y recomendaciones
-    """
+    """Genera reporte predictivo de salud del proyecto."""
     store_data = store_data or {}
     global_data = global_data or {}
 
@@ -138,6 +135,13 @@ def generate_health_report(
         "project_name": store_data.get("project_name", "unknown"),
     }
 
+    # Analisis Bayesiano
+    bayesian_risk = compute_composite_risk(
+        delegation_history, error_log, file_risks, tech_debt_trends,
+    )
+    trend_slopes = compute_trend_slopes(delegation_history, error_log)
+    confidence_intervals = build_confidence_intervals(delegation_history)
+
     return HealthReport(
         generated_at=datetime.now().isoformat(),
         project_name=store_data.get("project_name", "unknown"),
@@ -147,6 +151,9 @@ def generate_health_report(
         tech_debt_trends=tech_debt_trends,
         recommendations=recommendations,
         stats=stats,
+        bayesian_risk_score=bayesian_risk,
+        confidence_intervals=confidence_intervals,
+        trend_slopes=trend_slopes,
     )
 
 
