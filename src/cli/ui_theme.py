@@ -39,7 +39,7 @@ def render_ascii_banner(console: Console):
     console.print("        [bold white]██║     ██║   ██║██║  ██║██╔══╝[/bold white]")
     console.print("        [bold white]╚██████╗╚██████╔╝██████╔╝███████╗[/bold white]")
     console.print("        [bold white] ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝[/bold white]")
-    console.print(f"  [dim]v{VERSION}[/dim]")
+    console.print(f"  [dim]v{VERSION}[/dim]  [bold bright_magenta]by Galidar[/bold bright_magenta]")
     console.print()
 
 

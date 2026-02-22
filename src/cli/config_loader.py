@@ -28,7 +28,7 @@ os.makedirs(SKILLS_DIR, exist_ok=True)
 # Ajustar sys.path para importaciones
 sys.path.insert(0, os.path.join(BASE_DIR, 'src'))
 
-VERSION = "1.0.0"
+VERSION = "4.0.0"
 
 
 def load_config(config_path: str = None) -> dict:
