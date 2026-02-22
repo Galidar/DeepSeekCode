@@ -14,6 +14,7 @@ import re
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 from .loader import SkillLoader, KnowledgeSkill
+from .semantic_skill_index import SemanticSkillIndex
 from .skill_constants import (
     SKILL_KEYWORD_MAP, GAME_KEYWORDS, GAME_SKILLS, CORE_SKILLS,
     DELEGATE_TOKEN_BUDGET, INTERACTIVE_TOKEN_BUDGET,
@@ -38,12 +39,26 @@ def _estimate_tokens(text: str) -> int:
     return len(text) // 4
 
 
+_semantic_index = None
+
+
+def _get_semantic_index():
+    """Lazy singleton para el indice semantico TF-IDF."""
+    global _semantic_index
+    if _semantic_index is None:
+        _semantic_index = SemanticSkillIndex()
+        _semantic_index.build_from_keywords(SKILL_KEYWORD_MAP)
+    return _semantic_index
+
+
 def detect_relevant_skills(
     message: str,
     max_skills: int = 5,
     exclude: List[str] = None
 ) -> List[str]:
-    """Detecta que skills son relevantes basandose en el mensaje del usuario.
+    """Detecta skills relevantes usando matching semantico TF-IDF.
+
+    Flujo: semantic search -> filtrar excluidos -> fallback a keywords si vacio.
 
     Args:
         message: Mensaje del usuario
@@ -52,6 +67,32 @@ def detect_relevant_skills(
 
     Returns:
         Lista de nombres de skills ordenados por relevancia
+    """
+    exclude_set = set(exclude or [])
+
+    # Try semantic matching first
+    try:
+        idx = _get_semantic_index()
+        results = idx.search(message, top_k=max_skills + len(exclude_set))
+        semantic_names = [name for name, score in results
+                         if name not in exclude_set and score > 0.05][:max_skills]
+        if semantic_names:
+            return semantic_names
+    except Exception:
+        pass  # Fallback to keywords on any error
+
+    # Fallback to keyword matching
+    return _keyword_fallback(message, max_skills, exclude)
+
+
+def _keyword_fallback(
+    message: str,
+    max_skills: int = 5,
+    exclude: List[str] = None
+) -> List[str]:
+    """Fallback: detecta skills por keyword matching clasico.
+
+    Preserva la logica original de SKILL_KEYWORD_MAP + game context bonus.
     """
     normalized = _normalize_text(message)
     scores: Dict[str, int] = {}

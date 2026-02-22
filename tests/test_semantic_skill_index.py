@@ -87,3 +87,47 @@ class TestSemanticSkillIndex:
         results = idx.search("draw 2d canvas game render", top_k=3)
         names = [name for name, score in results]
         assert "canvas-2d-reference" in names
+
+
+class TestSkillInjectorIntegration:
+    """Tests de integracion: detect_relevant_skills con semantic matching."""
+
+    def test_detect_relevant_skills_returns_list(self):
+        from deepseek_code.skills.skill_injector import detect_relevant_skills
+        results = detect_relevant_skills("create a 2d canvas game with physics", max_skills=5)
+        assert isinstance(results, list)
+        assert len(results) > 0
+        assert len(results) <= 5
+
+    def test_detect_relevant_skills_with_exclude(self):
+        from deepseek_code.skills.skill_injector import detect_relevant_skills
+        results = detect_relevant_skills(
+            "canvas 2d draw render", max_skills=5, exclude=["canvas-2d-reference"]
+        )
+        assert "canvas-2d-reference" not in results
+
+    def test_detect_relevant_skills_fallback(self):
+        """Even if semantic fails, keyword fallback should work."""
+        from deepseek_code.skills.skill_injector import detect_relevant_skills
+        # A query with exact keywords should always return results
+        results = detect_relevant_skills("javascript async await promise", max_skills=3)
+        assert isinstance(results, list)
+
+    def test_keyword_fallback_still_accessible(self):
+        """_keyword_fallback debe seguir existiendo como funcion interna."""
+        from deepseek_code.skills.skill_injector import _keyword_fallback
+        results = _keyword_fallback("canvas 2d draw render", max_skills=3)
+        assert isinstance(results, list)
+
+    def test_semantic_index_is_lazy(self):
+        """El indice semantico se crea solo al usarse, no al importar."""
+        import deepseek_code.skills.skill_injector as mod
+        # After reset, should be None until detect_relevant_skills is called
+        old_idx = mod._semantic_index
+        mod._semantic_index = None
+        assert mod._semantic_index is None
+        # Calling detect triggers lazy init
+        mod.detect_relevant_skills("test query", max_skills=1)
+        assert mod._semantic_index is not None
+        # Restore
+        mod._semantic_index = old_idx
