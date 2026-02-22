@@ -21,8 +21,7 @@ from .api_caller import build_api_params
 
 # Limites de contexto segun modo de operacion
 # API: 128K tokens (deepseek-chat/deepseek-reasoner via API oficial)
-# Web (App/Chat): El modelo es 128K pero usamos un limite alto para no truncar
-#   prematuramente — la interfaz web de DeepSeek maneja su propio contexto.
+# Web: 1M tokens por chat (cada ventana de chat es independiente con 1M de contexto)
 API_MAX_TOKENS = 131072
 WEB_MAX_TOKENS = 1000000  # Alto intencional: delegamos gestion de contexto al servidor web
 # Umbral por defecto (80%) — a partir de aqui se activa resumen progresivo

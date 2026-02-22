@@ -1,6 +1,6 @@
 ---
 name: deepseek-code-mastery
-description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.4 agrega Token-Efficient Pipeline con save_response.py que escribe codigo directo al disco via pipe, reduciendo tokens de Claude ~96% en tareas de generacion. v2.3 Semantic Engine central (TF-IDF puro Python, cosine similarity, Bayesian Beta inference, temporal decay, Mann-Kendall trend detection) potencia todos los subsistemas. Skills se seleccionan por similaridad semantica TF-IDF. Memoria usa temporal decay + busqueda semantica + compactacion inteligente. GlobalMemory con Bayesian success rates y clustering semantico. Predictive Intelligence con Bayesian composite risk, confidence intervals, trend slopes. Plus Intelligence Package (5 features), V3.2 auto-select model, thinking mode, smart chunking, 15 MCP tools, dual quantum sessions, multi-step, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
+description: Referencia completa para operar DeepSeek Code (1M tokens por chat via web, open source, sin expiracion) como sistema multi-agente subordinado a Claude Code. v4.0 con sistema de identidad, prompts adaptativos, Token-Efficient Pipeline (save_response.py directo a disco, ~96% ahorro), Semantic Engine central (TF-IDF, cosine similarity, Bayesian Beta, temporal decay, Mann-Kendall), Skills por similaridad semantica, memoria dual (surgical + global), Intelligence Package (5 features), dual quantum sessions, multi-step, multi-session, converse, y protocolo de sesiones 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
 ---
 
 # DeepSeek Code Mastery — Guia Completa para Claude Code
@@ -101,7 +101,7 @@ EXE:         <DEEPSEEK_DIR>/dist/DeepSeekCode.exe     (si se compilo con PyInsta
 
 ### Autenticacion
 
-DeepSeek Code soporta **dos modos**: web (gratis) y API (pagado). Ambos usan DeepSeek V3.2 con **128K tokens de contexto**.
+DeepSeek Code se conecta directamente a la **web de DeepSeek** (gratis, open source, sin expiracion). Cada chat tiene **1M tokens de contexto** — los chats son independientes y no comparten memoria entre si.
 
 - **Modo Web**: `bearer_token` + `cookies` + WASM para firmar requests. Login via `/login` (PyQt5 WebEngine). Tokens expiran cada ~24-48h, re-login automatico si falla. **Gratis**.
 - **Modo API**: `api_key` de platform.deepseek.com. Pago por tokens.
@@ -196,7 +196,7 @@ python run.py --delegate "TAREA" [opciones] --json
 - `success: false` + `validation.truncated: true` = respuesta cortada, reducir scope
 - `success: false` + `validation.todos_missing: ["renderMap"]` = TODOs no completados
 - `success: true` + `response` = codigo listo para usar
-- `token_usage.context_used_percent` = cuanto del 128K se consumio
+- `token_usage.context_used_percent` = cuanto del 1M se consumio
 - `token_usage.skills_injected` = tokens de conocimiento inyectado
 
 ### Cuando Usar --template vs Tarea Libre
@@ -386,32 +386,32 @@ DeepSeek Code tiene un sistema de inyeccion automatica de conocimiento en 3 nive
 - Skills de nicho que puntuaron pero no entraron en Tier 2
 - Con 20K tokens, pueden entrar 2-3 skills adicionales
 
-### Budget de Tokens (128K Contexto)
+### Budget de Tokens (1M Contexto Web)
 
-DeepSeek V3.2 tiene **128,000 tokens de contexto**. El budget de skills esta
-diseñado para maximizar conocimiento inyectado dejando espacio para template y respuesta.
+Cada chat de DeepSeek via web tiene **1M tokens de contexto** (cada ventana de chat es independiente, no comparten memoria entre si). El budget de skills esta
+diseñado para maximizar conocimiento inyectado dejando amplio espacio para template y respuesta.
 
 ```
-Modo Delegacion (128K contexto):
+Modo Delegacion (1M contexto web):
   Core:       15,000 tokens (siempre presente, ~60K chars)
   Domain:     45,000 tokens (por relevancia, ~180K chars)
   Specialist: 20,000 tokens (si hay espacio, ~80K chars)
-  TOTAL:      80,000 tokens para skills (~320K chars, 62.5% del contexto)
+  TOTAL:      80,000 tokens para skills (~320K chars, 8% del contexto)
 
   + DELEGATE_SYSTEM_PROMPT:  ~7,000 tokens
   + SurgicalMemory briefing: ~3,000 tokens
   + GlobalMemory briefing:   ~2,000 tokens
   + Template + context:      variable
-  = ~92,000 tokens de sistema (~72% del contexto de 128K)
-  = ~36,000 tokens disponibles para la respuesta de DeepSeek
+  = ~92,000 tokens de sistema (~9% del contexto de 1M)
+  = ~908,000 tokens disponibles para la respuesta de DeepSeek
 
-Modo Interactivo (128K contexto): 80,000 tokens para skills
+Modo Interactivo (1M contexto web): 80,000 tokens para skills
 ```
 
-**Nota**: Con 128K de contexto, el budget de 80K para skills es agresivo.
+**Nota**: Con 1M de contexto via web, el budget de 80K para skills deja espacio masivo.
 En tareas con templates grandes, el sistema auto-reduce skills inyectadas
-para dejar espacio. Para delegaciones simples sin template, el budget completo
-funciona bien. `deepseek-reasoner` da hasta 64K output (incluyendo chain-of-thought).
+como optimizacion. Para delegaciones simples sin template, el budget completo
+funciona bien. DeepSeek es open source y no caduca.
 
 ### Skills Disponibles (51 total)
 
@@ -1052,11 +1052,11 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 
 ---
 
-## 12. Gestion Estrategica de Tokens (128K Budget)
+## 12. Gestion Estrategica de Tokens (1M Budget Web)
 
-### Contexto: 128K Tokens Disponibles
+### Contexto: 1M Tokens Disponibles por Chat
 
-DeepSeek V3.2 ofrece **128,000 tokens de contexto** (tanto API como web). La clave
+Cada chat de DeepSeek via web ofrece **1,000,000 tokens de contexto** (cada ventana es independiente). La clave
 es inyectar el conocimiento justo para la tarea, equilibrando skills con espacio
 para template y respuesta.
 
@@ -1117,12 +1117,12 @@ Para calcular manualmente: `tokens ≈ caracteres / 3.5`
 ### Optimizacion del Budget
 
 **Regla general**: Equilibrar skills inyectadas con espacio para respuesta.
-Con 128K de contexto, ser selectivo con skills para tareas con templates grandes.
+Con 1M de contexto web, hay espacio generoso pero conviene ser eficiente.
 
-- **Tarea simple** (1 funcion): Core + 1-2 Domain = ~25K input, ~103K para respuesta
-- **Tarea media** (1 archivo): Core + 3-4 Domain = ~40K input, ~88K para respuesta
-- **Tarea compleja** (multi-aspecto): Core + 5-8 Domain = ~60K input, ~68K para respuesta
-- **Quantum** (2 sesiones): Cada sesion tiene su propio contexto de 128K
+- **Tarea simple** (1 funcion): Core + 1-2 Domain = ~25K input, ~975K para respuesta
+- **Tarea media** (1 archivo): Core + 3-4 Domain = ~40K input, ~960K para respuesta
+- **Tarea compleja** (multi-aspecto): Core + 5-8 Domain = ~60K input, ~940K para respuesta
+- **Quantum** (2 sesiones): Cada sesion tiene su propio contexto de 1M
 
 ---
 

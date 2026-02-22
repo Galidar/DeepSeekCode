@@ -4,16 +4,16 @@
 
 # ⚡ DeepSeek Code — Claude Code Plugin
 
-### **Give Claude Code a self-evolving 128K-token AI partner with full system access**
+### **Give Claude Code a self-evolving 1M-token AI partner with full system access**
 
 <br>
 
 ![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-E87E04?style=for-the-badge)
-![DeepSeek](https://img.shields.io/badge/DeepSeek-128K_Context-4F46E5?style=for-the-badge)
+![DeepSeek](https://img.shields.io/badge/DeepSeek-1M_Context-4F46E5?style=for-the-badge)
 ![Commands](https://img.shields.io/badge/Commands-5-22C55E?style=for-the-badge)
 ![Skills](https://img.shields.io/badge/Knowledge-1000+_lines-F59E0B?style=for-the-badge)
 ![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
-![Version](https://img.shields.io/badge/v2.6.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/v4.0.0-blue?style=for-the-badge)
 ![Semantic](https://img.shields.io/badge/Semantic_Engine-TF--IDF_|_Bayesian-9333EA?style=for-the-badge)
 ![Efficient](https://img.shields.io/badge/Token_Savings-~99.8%25-10B981?style=for-the-badge)
 ![Sessions](https://img.shields.io/badge/Sessions-Persistent_+_Knowledge_Transfer-06B6D4?style=for-the-badge)
@@ -30,7 +30,7 @@ This plugin gives Claude Code **complete operational knowledge** of the DeepSeek
 
 ```mermaid
 graph LR
-    CC[🧠 Claude Code<br/>with Plugin] -->|"/deepseek-code:delegate"| DS[⚡ DeepSeek Code<br/>128K tokens]
+    CC[🧠 Claude Code<br/>with Plugin] -->|"/deepseek-code:delegate"| DS[⚡ DeepSeek Code<br/>1M tokens]
     CC -->|"/deepseek-code:quantum"| QB{Quantum Bridge}
     CC -->|"/deepseek-code:multi-step"| MS[Multi-Step]
     CC -->|"/deepseek-code:converse"| CV[Conversational]
@@ -214,7 +214,7 @@ plugin/
 
 <br>
 
-**DeepSeek Code Plugin v2.6** — Session Orchestrator + Knowledge Transfer + Token-Efficient Pipeline + Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
+**DeepSeek Code Plugin v4.0.0** — Session Orchestrator + Knowledge Transfer + Token-Efficient Pipeline + Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
 
 <br>
 

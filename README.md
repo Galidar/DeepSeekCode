@@ -2,13 +2,13 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:4F46E5,50:7C3AED,100:E87E04&height=230&section=header&text=DeepSeek%20Code&fontSize=70&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=The%20AI-to-AI%20Collaboration%20Revolution&descSize=20&descAlignY=55&descAlign=50" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+128K+%2B+200K+Tokens.+Zero+Wasted+Context.;Semantic+Engine%3A+TF-IDF+%2B+Bayesian+%2B+Temporal+Decay.;Free+code+generation+with+self-evolving+intelligence.)](https://github.com/Galidar/DeepSeekCode)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+1M+%2B+200K+Tokens.+Zero+Wasted+Context.;Semantic+Engine%3A+TF-IDF+%2B+Bayesian+%2B+Temporal+Decay.;Free+code+generation+with+self-evolving+intelligence.)](https://github.com/Galidar/DeepSeekCode)
 
 <br><br>
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 &nbsp;
-![DeepSeek](https://img.shields.io/badge/DeepSeek-128K_Context-4F46E5?style=for-the-badge)
+![DeepSeek](https://img.shields.io/badge/DeepSeek-1M_Context-4F46E5?style=for-the-badge)
 &nbsp;
 ![Claude](https://img.shields.io/badge/Claude_Code-Plugin-E87E04?style=for-the-badge)
 &nbsp;
@@ -34,7 +34,7 @@
 
 Most AI coding tools are **text chat in a box** — they can't touch your files, can't run commands, and forget everything after each session. Claude Code is powerful but burns through its 200K token context in 1-2 heavy tasks.
 
-DeepSeek Code changes that equation entirely. It's a **self-evolving AI coding system** with its own file tools, shell access, knowledge base, persistent memory, and an **Intelligence Package** that learns from your corrections, debugs its own failures, resolves git conflicts, converts requirement docs into executable plans, and predicts tech debt before it becomes a problem — all powered by DeepSeek's **128K token** context window (V3.2).
+DeepSeek Code changes that equation entirely. It's a **self-evolving AI coding system** with its own file tools, shell access, knowledge base, persistent memory, and an **Intelligence Package** that learns from your corrections, debugs its own failures, resolves git conflicts, converts requirement docs into executable plans, and predicts tech debt before it becomes a problem — all powered by DeepSeek's **1M token** context window via the free web interface — open source, no expiration.
 
 Use it standalone from the terminal, or plug it into Claude Code so Claude can delegate the heavy code generation while keeping its own tokens free. The result? Claude orchestrates in ~5-15K tokens per task while DeepSeek does all the heavy lifting — **for free** with a web account — and gets smarter with every delegation.
 
@@ -50,7 +50,7 @@ graph TB
     CC -->|"delegates"| SM["🧬 Surgical Memory — project rules"]
     CC -->|"delegates"| GM["🌐 Global Memory — your code style"]
 
-    SK --> DS["⚡ DeepSeek Code — 128K tokens, FREE"]
+    SK --> DS["⚡ DeepSeek Code — 1M tokens, FREE"]
     SM --> DS
     GM --> DS
 
@@ -108,12 +108,12 @@ Every delegation returns a precise token report so you always know where the bud
 }
 ```
 
-63% of DeepSeek's 128K context still available after a typical delegation. Claude only spent ~5-15K of its own 200K to orchestrate.
+95% of DeepSeek's 1M context still available after a typical delegation. Claude only spent ~5-15K of its own 200K to orchestrate.
 
 | | Claude Alone | Claude + DeepSeek Code |
 |:--|:-----------:|:---------------------:|
 | **Claude tokens per task** | 120K - 180K | **5K - 15K** (orchestration only) |
-| **Code generation context** | 200K (shared with everything) | **128K dedicated** (DeepSeek) |
+| **Code generation context** | 200K (shared with everything) | **1M dedicated** (DeepSeek web) |
 | **Code generation cost** | Your Claude tokens | **Free** (DeepSeek web) |
 | **Session reuse savings** | N/A | **99.8%** — only new context sent |
 | **Remembers past mistakes** | No | **Yes** — dual memory |
@@ -139,7 +139,7 @@ DeepSeek Code isn't a simple proxy to an API. It's a full coding environment wit
 graph TB
     User(["👤 You — describe your task"])
 
-    User -->|"python run.py"| DS["⚡ DeepSeek Code<br/>128K tokens · FREE · standalone"]
+    User -->|"python run.py"| DS["⚡ DeepSeek Code<br/>1M tokens · FREE · standalone"]
     User -->|"via Claude Code plugin"| CC["🧠 Claude Code<br/>200K tokens · orchestrates"]
 
     CC -->|"/delegate — single task"| DEL["📋 Oneshot<br/>auto-validates, retries ×3"]
