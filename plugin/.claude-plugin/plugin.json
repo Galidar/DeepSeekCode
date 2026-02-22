@@ -1,7 +1,7 @@
 {
   "name": "deepseek-code",
-  "version": "2.6.0",
-  "description": "Complete multi-agent AI system with Session Orchestrator, Knowledge Transfer, Token-Efficient Pipeline, Semantic Engine, and Intelligence Package. v2.6 adds Phase 2 injection (skills/memory/knowledge as individually tracked messages), cross-chat knowledge transfer, auto-summaries for routing, session-digest for smart routing, and 99.8% token savings on session reuse. v2.5 persistent sessions with continuity. v2.4 save_response.py pipe-to-disk (~96% savings). Pure-Python TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends. 5 intelligence features. V3.2 auto-select model, quantum dual sessions, multi-step plans, 51 skills, 15 MCP tools.",
+  "version": "4.0.0",
+  "description": "Complete multi-agent AI system with identity-aware adaptive prompts, hybrid TF-IDF + keyword skill detection, Session Orchestrator 3-phase protocol, Knowledge Transfer, Token-Efficient Pipeline, Semantic Engine, and Intelligence Package. v4.0 adds system identity block, hybrid scoring for skill detection quality (eliminates false positives), adaptive prompts per task level, redesigned system prompts. v2.6 Phase 2 injection, cross-chat knowledge transfer, session-digest routing. Pure-Python TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends. 5 intelligence features. V3.2 auto-select model, quantum dual sessions, multi-step plans, 51 skills, 15 MCP tools.",
   "author": {
     "name": "Galidar"
   },
