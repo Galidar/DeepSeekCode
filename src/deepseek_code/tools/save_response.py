@@ -108,8 +108,9 @@ def main():
 
     if args.output:
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+        clean = response.encode('utf-8', errors='replace').decode('utf-8')
         with open(args.output, 'w', encoding='utf-8') as f:
-            f.write(response)
+            f.write(clean)
         files_written.append(args.output)
         meta['saved_to'] = args.output
 
@@ -119,8 +120,9 @@ def main():
             for filename, content in detected.items():
                 filepath = os.path.join(args.dir, filename)
                 os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+                clean = content.encode('utf-8', errors='replace').decode('utf-8')
                 with open(filepath, 'w', encoding='utf-8') as f:
-                    f.write(content)
+                    f.write(clean)
                 files_written.append(filepath)
             meta['files_saved'] = list(detected.keys())
         else:
