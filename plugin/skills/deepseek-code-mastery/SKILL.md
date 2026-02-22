@@ -141,8 +141,14 @@ python run.py --delegate "TAREA" [opciones] --json
    a. Carga CORE_SKILLS siempre (programming-foundations, data-structures, common-errors)
    b. Detecta skills Domain relevantes por keywords de la tarea
    c. Llena hasta el budget de tokens (core:15K + domain:45K + specialist:20K = 80K)
-5. enriched_system = DELEGATE_SYSTEM_PROMPT + skills_context + surgical_briefing + global_briefing
-6. build_delegate_prompt(task, template, context, feedback) -> user_message
+5. SessionOrchestrator.prepare_session_call() detecta inyecciones pendientes:
+   - Skills relevantes (TF-IDF semantic detection)
+   - SurgicalMemory briefing (contexto del proyecto)
+   - GlobalMemory briefing (perfil personal cross-proyecto)
+6. chat_in_session() ejecuta protocolo 3-fases:
+   Fase 1: system_prompt (DELEGATE_SYSTEM_PROMPT base) -> "OK"
+   Fase 2: pending_injections (skills, surgical, global) -> "Ack" por cada uno
+   Fase 3: user_message limpio (task + template + context + feedback)
 7. DeepSeek genera la respuesta (codigo puro, sin markdown)
 8. delegate_validator valida: no truncamiento, TODOs completos, sin errores canvas
 9. Si falla validacion y quedan retries: re-intenta con feedback de errores
@@ -544,15 +550,25 @@ RENDIMIENTO POR MODO:
 - Purga skills con <2 inyecciones y >90 dias sin uso
 - Cross-project errors ordenados por `temporal_decay(age, half_life=60) * count`
 
-### Orden de inyeccion en system prompt
+### Protocolo 3-fases de inyeccion (v2.6)
 
 ```
-DELEGATE_SYSTEM_PROMPT       (~7K tokens, base)
-+ skills_extra               (~80K tokens, skills 3-tier)
-+ surgical_briefing          (~3K tokens, contexto del proyecto)
-+ global_briefing            (~2K tokens, perfil personal)
-= enriched_system            (~92K tokens, ~72% del contexto 128K)
+Fase 1 — System prompt:
+  DELEGATE_SYSTEM_PROMPT       (~7K tokens, base via assemble_delegate_prompt())
+
+Fase 2 — Inyecciones separadas (pending_injections):
+  + skill:programming-foundations  (~15K tokens, core skills)
+  + skill:domain-relevante         (~45K tokens, domain skills por TF-IDF)
+  + memory:surgical-project        (~3K tokens, contexto del proyecto)
+  + global:developer-profile       (~2K tokens, perfil personal)
+  Total inyecciones: ~80K tokens, cada una como mensaje independiente
+
+Fase 3 — User message limpio:
+  build_delegate_prompt(task, template, context, feedback)
 ```
+
+SessionOrchestrator trackea que inyecciones ya se enviaron a cada sesion,
+evitando re-envios en llamadas subsiguientes (~92K tokens ahorrados por reuso).
 
 ---
 
@@ -658,7 +674,7 @@ Ahora (root cause analysis):
        → retry dirigido con feedback especifico → exito
 ```
 
-Patrones conocidos: `truncation`, `missing_todos`, `innerHTML_violation`, `const_usage`. Se integra automaticamente en el review phase de `collaboration.py`.
+Patrones conocidos: `truncation`, `missing_todos`, `innerHTML_violation`, `const_usage`. Se integra automaticamente en el review phase de `collaboration.py` (via `chat_in_session()` con protocolo 3-fases).
 
 ### Feature 2: Shadow Learning
 
@@ -731,14 +747,20 @@ Detecta:
 - `confidence_intervals`: CI 95% para delegation success rate via Beta posterior
 - `trend_slopes`: Mann-Kendall trend direction para duration y error frequency series
 
-### Orden de Inyeccion Actualizado (v2.2)
+### Protocolo de Inyeccion con Intelligence Data (v2.6)
 
 ```
-DELEGATE_SYSTEM_PROMPT       (~7K tokens, base)
-+ skills_extra               (~80K tokens, skills 3-tier)
-+ surgical_briefing          (~3K tokens, contexto proyecto + intelligence data)
-+ global_briefing            (~2K tokens, perfil personal)
-= enriched_system            (~92K tokens, ~72% del contexto 128K)
+Fase 1 — System prompt:
+  assemble_delegate_prompt()     (~7K tokens, base)
+
+Fase 2 — Inyecciones via SessionOrchestrator:
+  + skill:core-skills            (~15K tokens, siempre inyectados)
+  + skill:domain-detected        (~45K tokens, TF-IDF semantic match)
+  + memory:surgical-project      (~3K tokens, proyecto + intelligence data)
+  + global:developer-profile     (~2K tokens, perfil personal)
+  Total: ~80K tokens en mensajes separados (trackeo por sesion)
+
+Fase 3 — User message limpio (task + template)
 ```
 
 El briefing de SurgicalMemory ahora incluye seccion 5.5 "Intelligence Data":
