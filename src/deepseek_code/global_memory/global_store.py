@@ -10,6 +10,10 @@ import sys
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from deepseek_code.intelligence.semantic_engine import (
+    BayesianEstimator, temporal_decay, TFIDFVectorizer, cosine_similarity,
+)
+
 # Limites de compactacion
 MAX_SKILL_COMBOS = 30
 MAX_CROSS_ERRORS = 20
@@ -88,11 +92,25 @@ class GlobalStore:
             sorted_c = sorted(combos, key=lambda x: x.get("count", 0), reverse=True)
             self.data["skill_combos"] = sorted_c[:MAX_SKILL_COMBOS]
 
-        # cross_project_errors: max 20, por count descendente
+        # cross_project_errors: max 20, weighted by temporal_decay * count
         errors = self.data.get("cross_project_errors", [])
         if len(errors) > MAX_CROSS_ERRORS:
-            sorted_e = sorted(errors, key=lambda x: x.get("count", 0), reverse=True)
-            self.data["cross_project_errors"] = sorted_e[:MAX_CROSS_ERRORS]
+            now = datetime.now()
+            scored = []
+            for e in errors:
+                age_days = 0
+                last = e.get("last_seen", "")
+                if last:
+                    try:
+                        age_days = max(
+                            0, (now - datetime.fromisoformat(last)).total_seconds() / 86400
+                        )
+                    except ValueError:
+                        pass
+                score = e.get("count", 1) * temporal_decay(age_days, half_life=60)
+                scored.append((e, score))
+            scored.sort(key=lambda x: -x[1])
+            self.data["cross_project_errors"] = [e for e, _ in scored[:MAX_CROSS_ERRORS]]
 
         # task_keyword_success: max 50, por total descendente
         keywords = self.data.get("task_keyword_success", {})
@@ -142,6 +160,13 @@ class GlobalStore:
         st["success_rate"] = round(st["with_success"] / st["injected"], 3)
         st["last_used"] = datetime.now().isoformat()
 
+        # Bayesian estimate (more stable with few data points)
+        bayes = BayesianEstimator.from_stats(st["with_success"], st["injected"])
+        st["bayesian_mean"] = round(bayes.mean(), 4)
+        ci = bayes.confidence_interval(0.95)
+        st["bayesian_ci_lower"] = round(ci[0], 4)
+        st["bayesian_ci_upper"] = round(ci[1], 4)
+
     def update_skill_combo(self, skill_names: List[str], success: bool):
         """Actualiza estadisticas de combinacion de skills."""
         if len(skill_names) < 2:
@@ -164,8 +189,10 @@ class GlobalStore:
         })
 
     def add_cross_error(self, error_type: str, project_name: str):
-        """Registra un error cross-proyecto."""
+        """Registra un error cross-proyecto con clustering semantico."""
         errors = self.data.setdefault("cross_project_errors", [])
+
+        # Exact match first (fast path)
         for err in errors:
             if err.get("type") == error_type:
                 err["count"] += 1
@@ -173,6 +200,34 @@ class GlobalStore:
                     err["projects"].append(project_name)
                 err["last_seen"] = datetime.now().isoformat()
                 return
+
+        # Semantic similarity check — merge if > 0.6
+        if len(errors) > 0:
+            try:
+                existing_texts = [e.get("type", "") for e in errors]
+                vectorizer = TFIDFVectorizer()
+                all_texts = existing_texts + [error_type]
+                vectors = vectorizer.fit_transform(all_texts)
+                query_vec = vectors[-1]
+
+                best_sim = 0.0
+                best_idx = -1
+                for i, vec in enumerate(vectors[:-1]):
+                    sim = cosine_similarity(query_vec, vec)
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_idx = i
+
+                if best_sim > 0.6 and best_idx >= 0:
+                    errors[best_idx]["count"] += 1
+                    if project_name not in errors[best_idx].get("projects", []):
+                        errors[best_idx]["projects"].append(project_name)
+                    errors[best_idx]["last_seen"] = datetime.now().isoformat()
+                    return
+            except Exception:
+                pass  # If semantic matching fails, just add as new
+
+        # New error entry
         errors.append({
             "type": error_type, "count": 1,
             "projects": [project_name],

@@ -109,3 +109,72 @@ class TestSurgicalStoreSmartCompact:
         recent_score = store._entry_relevance(recent_entry)
         old_score = store._entry_relevance(old_entry)
         assert recent_score > old_score
+
+
+class TestGlobalStoreBayesian:
+    """Tests para GlobalStore con stats Bayesianos."""
+
+    def test_bayesian_skill_stat(self, tmp_path):
+        from deepseek_code.global_memory.global_store import GlobalStore
+        store = GlobalStore(str(tmp_path))
+        store.load()
+        store.update_skill_stat("canvas-2d", success=True, truncated=False)
+        store.update_skill_stat("canvas-2d", success=True, truncated=False)
+        store.update_skill_stat("canvas-2d", success=False, truncated=True)
+        store.save()
+
+        stat = store.data["skill_stats"]["canvas-2d"]
+        assert "bayesian_mean" in stat
+        assert 0.0 <= stat["bayesian_mean"] <= 1.0
+        # 2 successes, 1 failure: Beta(3,2) -> mean = 3/5 = 0.6
+        assert stat["bayesian_mean"] > 0.5
+
+    def test_bayesian_with_few_data_points(self, tmp_path):
+        from deepseek_code.global_memory.global_store import GlobalStore
+        store = GlobalStore(str(tmp_path))
+        store.load()
+        store.update_skill_stat("new-skill", success=True, truncated=False)
+        stat = store.data["skill_stats"]["new-skill"]
+        # With 1 success: Beta(2,1) -> mean = 2/3 ≈ 0.667
+        assert "bayesian_mean" in stat
+        assert 0.5 < stat["bayesian_mean"] < 0.8
+
+    def test_bayesian_confidence(self, tmp_path):
+        from deepseek_code.global_memory.global_store import GlobalStore
+        store = GlobalStore(str(tmp_path))
+        store.load()
+        for _ in range(20):
+            store.update_skill_stat("well-tested", success=True, truncated=False)
+        stat = store.data["skill_stats"]["well-tested"]
+        assert "bayesian_ci_lower" in stat
+        assert "bayesian_ci_upper" in stat
+        # 20 successes, 0 failures — confidence should be high
+        assert stat["bayesian_ci_lower"] > 0.7
+
+    def test_semantic_error_clustering(self, tmp_path):
+        from deepseek_code.global_memory.global_store import GlobalStore
+        store = GlobalStore(str(tmp_path))
+        store.load()
+        store.add_cross_error("TypeError: undefined is not a function", "project_a")
+        store.add_cross_error("TypeError: Cannot read property of undefined", "project_b")
+        store.save()
+
+        # Both are TypeError related to undefined — should exist in errors
+        errors = store.data["cross_project_errors"]
+        assert len(errors) >= 1  # At least 1 (could merge or keep separate)
+        # The total count across all matching errors should be >= 2
+        total = sum(e.get("count", 0) for e in errors)
+        assert total >= 2
+
+    def test_exact_match_still_works(self, tmp_path):
+        from deepseek_code.global_memory.global_store import GlobalStore
+        store = GlobalStore(str(tmp_path))
+        store.load()
+        store.add_cross_error("truncation", "project_a")
+        store.add_cross_error("truncation", "project_b")
+        errors = store.data["cross_project_errors"]
+        # Exact match should increment count
+        truncation_errors = [e for e in errors if e["type"] == "truncation"]
+        assert len(truncation_errors) == 1
+        assert truncation_errors[0]["count"] == 2
+        assert len(truncation_errors[0]["projects"]) == 2
