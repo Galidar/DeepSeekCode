@@ -133,7 +133,6 @@ def _run_quantum_inner(
     quantum_base = assemble_delegate_prompt(
         has_template=template is not None,
         is_quantum=True,
-        is_complex=True,
     )
 
     # SessionOrchestrator detecta inyecciones (skills, surgical, global)

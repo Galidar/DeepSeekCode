@@ -12,7 +12,7 @@ from cli.bridge_utils import (
     create_app, load_file_safe, check_credentials, handle_no_credentials,
 )
 from cli.oneshot_helpers import (
-    build_token_usage, is_surgical_task, is_multi_file_task, is_complex_task,
+    build_token_usage, is_surgical_task, is_multi_file_task,
 )
 
 
@@ -225,7 +225,6 @@ def run_delegate_oneshot(
         base_system = assemble_delegate_prompt(
             has_template=template is not None,
             is_quantum=False,
-            is_complex=is_complex_task(task, template),
             is_surgical=is_surgical,
             is_multi_file=is_multi_file,
         )

@@ -122,7 +122,6 @@ def _run_multi_inner(
     base_system = assemble_delegate_prompt(
         has_template=template is not None,
         is_quantum=False,
-        is_complex=True,
     )
 
     # SessionOrchestrator detecta inyecciones (skills, surgical, global)

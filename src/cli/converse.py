@@ -109,22 +109,17 @@ def _run_converse_inner(
 
     # Clasificar el primer mensaje para adaptar el prompt
     from deepseek_code.client.task_classifier import classify_task, TaskLevel
-    from deepseek_code.client.prompt_builder import (
-        build_adaptive_system_prompt, assemble_delegate_prompt,
-    )
+    from deepseek_code.client.prompt_builder import build_adaptive_system_prompt
 
     first_msg = messages[0] if messages else ""
     task_level = classify_task(first_msg)
 
-    # Enriquecer system prompt con memorias si hay proyecto
+    # System prompt adaptativo — NUNCA usar assemble_delegate_prompt en converse
+    # porque inyecta reglas de "raw code output" (NUNCA bloques ```) que son
+    # incorrectas para modo conversacional donde SI queremos bloques copiables
     system_prompt = custom_system
     if not system_prompt:
-        if task_level.value >= TaskLevel.CODE_COMPLEX.value:
-            system_prompt = assemble_delegate_prompt(
-                has_template=False, is_quantum=False, is_complex=True,
-            )
-        else:
-            system_prompt = build_adaptive_system_prompt(task_level, first_msg)
+        system_prompt = build_adaptive_system_prompt(task_level, first_msg)
 
     # --- v2.6: Orchestrator-based token-efficient injection ---
     from deepseek_code.sessions.session_orchestrator import SessionOrchestrator
