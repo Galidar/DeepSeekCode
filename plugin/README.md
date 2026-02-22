@@ -13,9 +13,10 @@
 ![Commands](https://img.shields.io/badge/Commands-5-22C55E?style=for-the-badge)
 ![Skills](https://img.shields.io/badge/Knowledge-1000+_lines-F59E0B?style=for-the-badge)
 ![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
-![Version](https://img.shields.io/badge/v2.4.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/v2.6.0-blue?style=for-the-badge)
 ![Semantic](https://img.shields.io/badge/Semantic_Engine-TF--IDF_|_Bayesian-9333EA?style=for-the-badge)
-![Efficient](https://img.shields.io/badge/Token_Savings-~96%25-10B981?style=for-the-badge)
+![Efficient](https://img.shields.io/badge/Token_Savings-~99.8%25-10B981?style=for-the-badge)
+![Sessions](https://img.shields.io/badge/Sessions-Persistent_+_Knowledge_Transfer-06B6D4?style=for-the-badge)
 
 <br>
 
@@ -25,7 +26,7 @@
 
 ## What This Plugin Does
 
-This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package**, **Semantic Engine**, and **Token-Efficient Pipeline** for self-evolving code generation. v2.4 adds `save_response.py` — a pipe-to-disk handler that writes DeepSeek output directly to files, cutting Claude's token usage by ~96% on code generation tasks. Combined with v2.3's Semantic Engine (TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends), the system is both intelligent and cost-effective. Includes a comprehensive 1200+ line knowledge base covering every feature, mode, and configuration.
+This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package**, **Semantic Engine**, **Token-Efficient Pipeline**, and **Session Orchestrator** for self-evolving code generation. v2.6 adds persistent sessions with Phase 2 injection (skills, memory, knowledge sent as individually tracked messages), cross-chat knowledge transfer via `--transfer-from`, auto-summaries for smart routing via `--session-digest`, and interactive chat management (`/new`, `/chats`, `/switch`, `/close`). Session reuse cuts repeat-call tokens by ~99.8%. Includes a comprehensive 1200+ line knowledge base covering every feature, mode, and configuration.
 
 ```mermaid
 graph LR
@@ -99,10 +100,10 @@ If you see the system status report, the plugin is working correctly.
 
 | Command | Description |
 |:-------:|:----------|
-| `/deepseek-code:delegate` | Delegate a code task with oneshot mode and auto-continuation |
+| `/deepseek-code:delegate` | Delegate a code task with oneshot mode, sessions, and knowledge transfer |
 | `/deepseek-code:quantum` | Dual parallel delegation via Quantum Bridge |
 | `/deepseek-code:multi-step` | Execute a multi-step multi-file plan |
-| `/deepseek-code:converse` | Iterative multi-turn dialogue with shared quantum thinking |
+| `/deepseek-code:converse` | Iterative multi-turn dialogue with sessions and knowledge transfer |
 | `/deepseek-code:status` | Verify system status and configuration |
 
 ---
@@ -144,6 +145,7 @@ The plugin includes **deepseek-code-mastery** — a comprehensive 1200+ line kno
 | **🔮 Intelligence** | Introspective debugging, shadow learning, git conflicts, requirements pipeline, health reports |
 | **🧠 Semantic Engine** | TF-IDF vectorization, cosine similarity, Bayesian Beta inference, temporal decay, Mann-Kendall trends, composite risk scoring |
 | **⚡ Token Pipeline** | save_response.py pipe-to-disk, ~96% token savings, auto-split multi-file, metadata-only mode |
+| **🔗 Sessions v2.6** | Persistent sessions, Phase 2 injection, knowledge transfer, auto-summaries, routing digest, 99.8% savings on reuse |
 | **Session** | Web login (PoW/WASM), API keys, health check, multi-account |
 | **i18n** | English, Spanish, Japanese with fallback system |
 | **V3.2** | Auto-select model, thinking mode, smart chunking, scalable pool |
@@ -169,6 +171,11 @@ When using DeepSeek Code's interactive CLI directly, these commands are availabl
 | `/keys` | API key management help |
 | `/test` | Quick web session test |
 | `/lang` | Change language (EN/ES/JA) |
+| `/chat` | Show current chat info |
+| `/chats` | List all active chats |
+| `/new [name]` | Create a new chat |
+| `/switch <name>` | Switch to another chat |
+| `/close [name]` | Close a chat |
 | `/exit` | Exit |
 
 ---
@@ -207,7 +214,7 @@ plugin/
 
 <br>
 
-**DeepSeek Code Plugin v2.4** — Token-Efficient Pipeline + Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
+**DeepSeek Code Plugin v2.6** — Session Orchestrator + Knowledge Transfer + Token-Efficient Pipeline + Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
 
 <br>
 

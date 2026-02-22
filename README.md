@@ -20,6 +20,8 @@
 &nbsp;
 ![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
 &nbsp;
+![Sessions](https://img.shields.io/badge/Sessions-Persistent_+_Knowledge_Transfer-06B6D4?style=for-the-badge)
+&nbsp;
 ![Semantic](https://img.shields.io/badge/Semantic_Engine-TF--IDF_|_Bayesian-9333EA?style=for-the-badge)
 &nbsp;
 ![License](https://img.shields.io/badge/License-AGPL--3.0-374151?style=for-the-badge)
@@ -113,6 +115,7 @@ Every delegation returns a precise token report so you always know where the bud
 | **Claude tokens per task** | 120K - 180K | **5K - 15K** (orchestration only) |
 | **Code generation context** | 200K (shared with everything) | **128K dedicated** (DeepSeek) |
 | **Code generation cost** | Your Claude tokens | **Free** (DeepSeek web) |
+| **Session reuse savings** | N/A | **99.8%** — only new context sent |
 | **Remembers past mistakes** | No | **Yes** — dual memory |
 | **Validates its own output** | No | **Yes** — auto-retry on errors |
 
@@ -282,6 +285,65 @@ Both are fail-safe: if anything goes wrong, they return empty without interrupti
 
 <br>
 
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:06B6D4,100:0EA5E9&height=1&section=header" width="100%"/>
+
+<br>
+
+## Persistent Sessions & Knowledge Transfer
+
+Every DeepSeek chat is an independent **"sponge"** that absorbs knowledge. The v2.6 Session Orchestrator tracks what each session knows and only sends **new** context — cutting repeat-call tokens by 99.8%.
+
+<div align="center">
+
+```mermaid
+graph TB
+    ORCH["🎯 Session Orchestrator<br/>decides what each chat needs"]
+
+    ORCH -->|"1st call: full context"| S1["💬 delegate:auth-module<br/>92K tokens invested<br/>knows: JWT, bcrypt, middleware"]
+    ORCH -->|"2nd call: only new message"| S1
+    ORCH -->|"new session"| S2["💬 converse:api-design<br/>fresh session"]
+
+    S1 -->|"--transfer-from"| KT["🔄 Knowledge Transfer<br/>compact summary injection"]
+    KT -->|"topic + decisions + skills"| S2
+
+    S1 --> SUM["📊 Auto-Summary<br/>0 extra tokens, local heuristics"]
+    S2 --> SUM
+
+    SUM --> DIGEST["📋 --session-digest<br/>routing decisions for Claude"]
+
+    style ORCH fill:#06B6D4,stroke:#0E7490,color:#fff
+    style S1 fill:#4F46E5,stroke:#3730A3,color:#fff
+    style S2 fill:#4F46E5,stroke:#3730A3,color:#fff
+    style KT fill:#F59E0B,stroke:#B45309,color:#fff
+    style SUM fill:#8B5CF6,stroke:#6D28D9,color:#fff
+    style DIGEST fill:#22C55E,stroke:#15803D,color:#fff
+```
+
+</div>
+
+<br>
+
+Key features:
+
+- **Phase 2 Injection** — Skills, memory, and knowledge are sent as individual tracked messages. Each session remembers what it already received — no duplication.
+- **Knowledge Transfer** — `--transfer-from "delegate:auth"` injects a compact summary of another session's decisions into a new chat. Tracked bidirectionally.
+- **Auto-Summaries** — After each exchange, local heuristics classify the activity (code/design/fix/query) and update the session's topic and summary at zero token cost.
+- **Routing Digest** — `--session-digest` outputs JSON of all active sessions with topics, summaries, skills, and tokens invested — so Claude can route messages intelligently.
+- **Interactive Chat Management** — `/new`, `/chats`, `/switch`, `/close` commands in the interactive CLI for managing multiple concurrent DeepSeek conversations.
+
+```bash
+# Check all active sessions
+python run.py --session-digest
+
+# Delegate with session persistence
+python run.py --delegate "create auth" --session "auth-module" --json
+
+# Transfer knowledge to a new session
+python run.py --delegate "create API" --session "api" --transfer-from "delegate:auth-module" --json
+```
+
+<br>
+
 <img src="https://capsule-render.vercel.app/api?type=rect&color=0:EF4444,100:F59E0B&height=1&section=header" width="100%"/>
 
 <br>
@@ -367,9 +429,10 @@ python run.py
 
 <br>
 
-**📋 Oneshot Delegation** — Send a task, optionally with a template. DeepSeek fills the TODOs and returns complete, validated code. If the response gets truncated, it auto-continues up to 3 times.
+**📋 Oneshot Delegation** — Send a task, optionally with a template. DeepSeek fills the TODOs and returns complete, validated code. If the response gets truncated, it auto-continues up to 3 times. Use `--session` for persistence and `--transfer-from` for cross-chat knowledge.
 ```bash
 python run.py --delegate "implement inventory system" --template inventory.ts --json
+python run.py --delegate "add sorting" --session "inventory" --transfer-from "delegate:auth" --json
 ```
 
 <br>
@@ -388,9 +451,10 @@ python run.py --multi-step plan.json --json
 
 <br>
 
-**💬 Conversational** — Iterative multi-turn dialogue where Claude and DeepSeek think together. Each message maintains full history. Build incrementally.
+**💬 Conversational** — Iterative multi-turn dialogue where Claude and DeepSeek think together. Each message maintains full history. Build incrementally. Sessions persist across invocations.
 ```bash
-python run.py --converse "build the audio system" --json
+python run.py --converse "build the audio system" --session "audio" --json
+python run.py --converse "add spatial audio" --session "audio" --json
 ```
 
 <br>
@@ -490,7 +554,7 @@ Two authentication modes:
 
 **🌐 i18n** — 155 translation keys across English (full), Spanish (full), and Japanese (36 keys + automatic English fallback). Language selector on first run, switchable anytime with `/lang`.
 
-**🖥️ 12 CLI commands** — `/agent`, `/skill`, `/skills`, `/serena`, `/login`, `/logout`, `/health`, `/account`, `/keys`, `/test`, `/lang`, `/exit`
+**🖥️ 17 CLI commands** — `/agent`, `/skill`, `/skills`, `/serena`, `/login`, `/logout`, `/health`, `/account`, `/keys`, `/test`, `/lang`, `/chat`, `/chats`, `/new`, `/switch`, `/close`, `/exit`
 
 <br>
 

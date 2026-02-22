@@ -1,7 +1,7 @@
 {
   "name": "deepseek-code",
-  "version": "2.5.0",
-  "description": "Complete multi-agent AI system with Persistent Sessions, Token-Efficient Pipeline, Semantic Engine, and Intelligence Package. v2.5 adds persistent multi-session conversations with continuity: system prompt sent once, parent_message_id chaining, parallel named sessions across CLI invocations. v2.4 save_response.py writes DeepSeek output directly to disk via pipe, cutting Claude token usage ~96%. Pure-Python TF-IDF semantic matching, Bayesian inference, temporal decay, Mann-Kendall trend detection. 5 intelligence features. Plus: V3.2 auto-select model, thinking mode, quantum dual sessions, multi-step plans, semantic memory, 51 skills with TF-IDF matching, and 15 MCP tools.",
+  "version": "2.6.0",
+  "description": "Complete multi-agent AI system with Session Orchestrator, Knowledge Transfer, Token-Efficient Pipeline, Semantic Engine, and Intelligence Package. v2.6 adds Phase 2 injection (skills/memory/knowledge as individually tracked messages), cross-chat knowledge transfer, auto-summaries for routing, session-digest for smart routing, and 99.8% token savings on session reuse. v2.5 persistent sessions with continuity. v2.4 save_response.py pipe-to-disk (~96% savings). Pure-Python TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends. 5 intelligence features. V3.2 auto-select model, quantum dual sessions, multi-step plans, 51 skills, 15 MCP tools.",
   "author": {
     "name": "Galidar"
   },
@@ -55,6 +55,13 @@
     "conversation-continuity",
     "parent-message-id",
     "multi-chat",
-    "session-management"
+    "session-management",
+    "session-orchestrator",
+    "knowledge-transfer",
+    "phase2-injection",
+    "auto-summary",
+    "session-digest",
+    "routing",
+    "chat-management"
   ]
 }
