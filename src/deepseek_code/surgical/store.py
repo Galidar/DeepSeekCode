@@ -17,6 +17,8 @@ MAX_ERROR_LOG_ENTRIES = 30
 MAX_DELEGATION_HISTORY = 20
 MAX_PATTERNS = 15
 MAX_FEEDBACK_RULES = 20
+MAX_SHADOW_CORRECTIONS = 20
+MAX_FAILURE_ANALYSES = 15
 MAX_STORE_BYTES = 512 * 1024  # 512 KB por proyecto
 
 
@@ -52,6 +54,8 @@ def _default_store() -> dict:
         "delegation_history": [],
         "patterns": [],
         "feedback_rules": [],
+        "shadow_corrections": [],
+        "failure_analyses": [],
     }
 
 
@@ -125,6 +129,15 @@ class SurgicalStore:
             )
             self.data["feedback_rules"] = sorted_r[:MAX_FEEDBACK_RULES]
 
+        sc = self.data.get("shadow_corrections", [])
+        if len(sc) > MAX_SHADOW_CORRECTIONS:
+            sorted_sc = sorted(sc, key=lambda x: x.get("frequency", 0), reverse=True)
+            self.data["shadow_corrections"] = sorted_sc[:MAX_SHADOW_CORRECTIONS]
+
+        fa = self.data.get("failure_analyses", [])
+        if len(fa) > MAX_FAILURE_ANALYSES:
+            self.data["failure_analyses"] = fa[-MAX_FAILURE_ANALYSES:]
+
     def add_error(self, error_entry: dict):
         """Agrega una entrada al error_log."""
         error_entry["timestamp"] = datetime.now().isoformat()
@@ -169,6 +182,26 @@ class SurgicalStore:
             arch["structure"] = structure
         if key_decisions:
             arch["key_decisions"] = key_decisions
+
+    def add_shadow_correction(self, correction: dict):
+        """Agrega una correccion aprendida del usuario (shadow learning)."""
+        corrections = self.data.setdefault("shadow_corrections", [])
+        for existing in corrections:
+            if existing.get("pattern_type") == correction.get("pattern_type"):
+                existing["frequency"] = existing.get("frequency", 0) + 1
+                existing["last_seen"] = datetime.now().isoformat()
+                if correction.get("description"):
+                    existing["description"] = correction["description"]
+                return
+        correction.setdefault("first_seen", datetime.now().isoformat())
+        correction.setdefault("frequency", 1)
+        corrections.append(correction)
+
+    def add_failure_analysis(self, analysis: dict):
+        """Agrega un analisis de falla del introspective debugger."""
+        analyses = self.data.setdefault("failure_analyses", [])
+        analysis["timestamp"] = datetime.now().isoformat()
+        analyses.append(analysis)
 
     def set_conventions(self, **kwargs):
         """Establece o actualiza las convenciones."""

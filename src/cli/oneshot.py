@@ -303,6 +303,17 @@ def run_delegate_oneshot(
             project_name=detect_project_name(template_path, context_path),
         )
 
+        # Intelligence: Shadow learning (aprender de correcciones del usuario)
+        if is_success and template_path:
+            try:
+                from deepseek_code.intelligence.integration import on_post_commit
+                from deepseek_code.surgical.collector import detect_project_root
+                proj_root = detect_project_root(template_path)
+                if proj_root:
+                    on_post_commit(APPDATA_DIR, proj_root, response, surgical_store)
+            except Exception:
+                pass  # fail-safe
+
         if json_mode:
             restore_output(*originals)
             originals = None

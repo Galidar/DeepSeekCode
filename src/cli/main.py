@@ -58,6 +58,9 @@ class DeepSeekCodeApp:
         memory_path = config.get("memory_path", os.path.join(APPDATA_DIR, 'memory.md'))
         self.mcp_server.register_tool(MemoryTool(memory_path))
 
+        from deepseek_code.tools.git_conflict_tool import ResolveConflictsTool
+        self.mcp_server.register_tool(ResolveConflictsTool(allowed_paths))
+
         # Session manager para auto-recovery y health check
         self.session_manager = SessionManager(config, APPDATA_DIR)
 
@@ -263,9 +266,25 @@ def main():
                         help="Archivo JSON con mensajes para conversacion multi-turno")
     parser.add_argument("--project-context", dest="project_context",
                         help="Ruta a CLAUDE.md del proyecto (auto-detectado si no se pasa)")
+    parser.add_argument("--requirements",
+                        help="Documento de requisitos (.md/.txt) para generar plan multi-paso")
+    parser.add_argument("--auto-execute", dest="auto_execute", action="store_true",
+                        help="Ejecutar automaticamente el plan generado por --requirements")
+    parser.add_argument("--health-report", dest="health_report", action="store_true",
+                        help="Generar reporte predictivo de salud del proyecto")
     parser.add_argument("--config", help="Ruta al archivo de configuracion")
 
     args = parser.parse_args()
+
+    # Intelligence: Requirements pipeline y health report
+    if args.requirements:
+        from cli.intel_runner import run_requirements
+        run_requirements(args.requirements, args.json, args.config, args.auto_execute)
+        return
+    if args.health_report:
+        from cli.intel_runner import run_health_report
+        run_health_report(args.json, args.config, args.project_context)
+        return
 
     # Modo multi-sesion (N instancias paralelas)
     if args.multi:

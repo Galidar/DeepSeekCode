@@ -218,6 +218,15 @@ async def _review_phase(
                 )
             break
 
+        # Intelligence: Introspective debugging para feedback mejorado
+        try:
+            from deepseek_code.intelligence.integration import on_delegation_failure
+            debug_result = on_delegation_failure("", "", validation, response)
+            if debug_result.get("enhanced_feedback"):
+                validation["_debug_feedback"] = debug_result["enhanced_feedback"]
+        except Exception:
+            pass  # fail-safe: no romper el flujo principal
+
         # Construir mensaje de review
         review_msg = _build_review_message(validation, round_num + 1)
         print(

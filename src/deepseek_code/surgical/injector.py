@@ -86,6 +86,14 @@ def build_briefing(
             sections.append(text)
             used_tokens += tokens
 
+    # 5.5 Intelligence: Shadow corrections + failure analyses
+    text = _format_intelligence_data(store_data)
+    if text:
+        tokens = _estimate_tokens(text)
+        if used_tokens + tokens <= budget:
+            sections.append(text)
+            used_tokens += tokens
+
     # 6. CLAUDE.md (si hay presupuesto)
     if claude_md_content:
         remaining = budget - used_tokens
@@ -212,3 +220,36 @@ def _format_patterns(store_data: dict, task: str) -> str:
         lines.append(f"- {name}: {desc}")
 
     return "\n".join(lines) + "\n"
+
+
+def _format_intelligence_data(store_data: dict) -> str:
+    """Formatea datos del Intelligence Package (shadow corrections + analyses)."""
+    parts = []
+
+    # Shadow corrections aprendidas del usuario
+    corrections = store_data.get("shadow_corrections", [])
+    significant = [c for c in corrections if c.get("frequency", 0) >= 2]
+    if significant:
+        significant.sort(key=lambda x: x.get("frequency", 0), reverse=True)
+        lines = ["CORRECCIONES APRENDIDAS DEL USUARIO:"]
+        for c in significant[:5]:
+            freq = c.get("frequency", 0)
+            desc = c.get("description", "sin descripcion")
+            lines.append(f"- [{freq}x] {desc}")
+        parts.append("\n".join(lines))
+
+    # Reglas de prevencion de failure analyses
+    analyses = store_data.get("failure_analyses", [])
+    preventions = [a for a in analyses if a.get("prevention")]
+    if preventions:
+        lines = ["REGLAS DE PREVENCION (aprendidas de fallas):"]
+        for a in preventions[-3:]:
+            pattern = a.get("pattern", "?")
+            prevention = a.get("prevention", {})
+            action = prevention.get("action", "?")
+            lines.append(f"- {pattern} -> {action}")
+        parts.append("\n".join(lines))
+
+    if not parts:
+        return ""
+    return "\n".join(parts) + "\n"
