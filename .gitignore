@@ -46,9 +46,9 @@ DeepSeekCode.exe
 DeepSeekCode_Setup.exe
 installer/payload/DeepSeekCode.exe
 
-# Tests temporales
-test_*.py
-test_*.html
+# Tests temporales (solo en raiz, no en tests/)
+/test_*.py
+/test_*.html
 
 # Claude Code local
 .claude/
