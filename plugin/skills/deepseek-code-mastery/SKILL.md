@@ -1,6 +1,6 @@
 ---
 name: deepseek-code-mastery
-description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.1 incluye V3.2 auto-select model (deepseek-reasoner para codigo complejo, 64K output), thinking mode web, smart template chunking, max_tokens adaptivo, dual quantum sessions, multi-step, surgical memory, global memory, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
+description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.2 incluye Intelligence Package con 5 features revolucionarias — introspective debugging (root cause analysis en vez de retry ciego), shadow learning (aprende de correcciones del usuario via git diff), git conflict resolution (AI-powered merge con MCP tool), requirements pipeline (documento a plan ejecutable), predictive intelligence (deteccion de tech debt y health reports). Plus V3.2 auto-select model, thinking mode, smart chunking, 15 MCP tools, dual quantum sessions, multi-step, surgical + global memory, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
 ---
 
 # DeepSeek Code Mastery — Guia Completa para Claude Code
@@ -27,6 +27,8 @@ description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2)
 | **Multi-session** | `--multi "tarea"` | N instancias paralelas con roles |
 | **Multi-step** | `--multi-step plan.json` | Plan multi-paso secuencial/paralelo |
 | Conversacion | `--converse "msg"` | Dialogo multi-turno iterativo |
+| **Requirements** | `--requirements doc.md` | **v2.2**: Documento de requisitos → plan ejecutable |
+| **Health Report** | `--health-report` | **v2.2**: Reporte predictivo de salud del proyecto |
 
 ### Flags Globales Nuevos (v2.0)
 
@@ -602,6 +604,108 @@ Config `"pool_size": N` (clamp: 2-10) para cuando se integre multi-session.
 
 ---
 
+## 8.6. Intelligence Package (v2.2) — 5 Features Revolucionarias
+
+El Intelligence Package convierte a DeepSeek Code de un generador de codigo en un **sistema que aprende, predice y se auto-corrige**. Todas las features son fail-safe: si fallan, el flujo principal continua sin interrupcion.
+
+### Feature 1: Introspective Debugging
+
+Cuando una delegacion falla, en vez de retry ciego, analiza la **causa raiz** correlacionando con el historial de errores del SurgicalMemory.
+
+```
+Antes (retry ciego):
+  Falla → "intenta de nuevo" → misma falla → frustración
+
+Ahora (root cause analysis):
+  Falla → analiza patron → "truncation_many_todos" detectado
+       → fix: "Dividir template: TODOs 1-5 en chunk A, 6-10 en chunk B"
+       → retry dirigido con feedback especifico → exito
+```
+
+Patrones conocidos: `truncation`, `missing_todos`, `innerHTML_violation`, `const_usage`. Se integra automaticamente en el review phase de `collaboration.py`.
+
+### Feature 2: Shadow Learning
+
+Aprende de las **correcciones manuales** del usuario. Despues de cada delegacion exitosa, compara lo que DeepSeek genero con lo que el usuario realmente commiteo (via `git diff`).
+
+```
+Ciclo de aprendizaje:
+  1. DeepSeek genera codigo sin try/catch
+  2. Usuario agrega try/catch manualmente y commitea
+  3. Shadow Learning detecta patron: "added_error_handling" (git diff)
+  4. Siguiente delegacion: "CORRECCIONES APRENDIDAS: [3x] Usuario siempre agrega try/catch"
+  5. DeepSeek genera codigo CON try/catch automaticamente
+```
+
+7 clasificadores: error_handling, logging, null_check, type_annotation, let_to_const, const_to_let, added_comments. Tambien detecta renombramientos sistematicos.
+
+### Feature 3: Git Intelligence (MCP Tool)
+
+Detecta y resuelve conflictos de merge usando AI con contexto del proyecto. Expuesto como **MCP tool** `resolve_conflicts` para que Claude Code lo invoque directamente.
+
+```bash
+# Detectar conflictos
+python -c "from deepseek_code.intelligence.git_intel import detect_conflicts; print(detect_conflicts('.'))"
+
+# Via MCP tool (Claude Code invoca directamente):
+# resolve_conflicts(action="detect", project_path="/proyecto")
+# resolve_conflicts(action="preview", project_path="/proyecto")
+# resolve_conflicts(action="resolve", project_path="/proyecto", auto_apply=true)
+```
+
+Acciones: `detect` (lista archivos), `preview` (muestra conflictos), `resolve` (resuelve con heuristica o AI).
+
+### Feature 4: Requirements Pipeline
+
+Parsea un documento de requisitos (markdown/texto) y genera un **plan multi-paso ejecutable** compatible con `--multi-step`.
+
+```bash
+# Solo generar plan
+python run.py --requirements features.md --json
+
+# Generar plan Y ejecutarlo automaticamente
+python run.py --requirements features.md --auto-execute --json
+```
+
+Deteccion automatica de:
+- **Prioridad**: MUST/REQUIRED → "must", SHOULD → "should", COULD → "could"
+- **Dependencias**: "depende de:", "requires:", "after:", "prerequisitos:"
+- **Formato**: Headers markdown, listas numeradas, parrafos libres
+
+Genera plan con topological sort + parallel grouping para maxima eficiencia.
+
+### Feature 5: Predictive Intelligence
+
+Analiza memorias existentes (Surgical + Global) para generar un **reporte de salud predictivo**.
+
+```bash
+python run.py --health-report --json
+# o con proyecto especifico:
+python run.py --health-report --project-context ./CLAUDE.md --json
+```
+
+Detecta:
+- **File risks**: Archivos cerca del limite de 400 LOC (75%+)
+- **Error clusters**: Errores recurrentes agrupados por tipo con tendencias
+- **Tech debt trends**: failure_rate creciente, duracion aumentando, errores repetidos
+- **Risk level**: healthy / warning / critical con recomendaciones priorizadas
+
+### Orden de Inyeccion Actualizado (v2.2)
+
+```
+DELEGATE_SYSTEM_PROMPT       (~7K tokens, base)
++ skills_extra               (~80K tokens, skills 3-tier)
++ surgical_briefing          (~3K tokens, contexto proyecto + intelligence data)
++ global_briefing            (~2K tokens, perfil personal)
+= enriched_system            (~92K tokens, ~72% del contexto 128K)
+```
+
+El briefing de SurgicalMemory ahora incluye seccion 5.5 "Intelligence Data":
+- Shadow corrections aprendidas (frecuencia >= 2)
+- Reglas de prevencion de failure analyses
+
+---
+
 ## 9. Patrones de Uso Optimos
 
 ### Receta: Generar Codigo de Juego
@@ -792,7 +896,14 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 │       ├── delegate\
 │       │   ├── bridge_utils.py      # Utilidades compartidas
 │       │   └── delegate_validator.py # Validacion de respuestas
-│       ├── tools\                   # 12 herramientas MCP
+│       ├── intelligence\
+│       │   ├── debugger.py          # Introspective debugging (root cause analysis)
+│       │   ├── shadow_learner.py    # Shadow learning (git diff corrections)
+│       │   ├── git_intel.py         # Git intelligence (conflict resolution)
+│       │   ├── requirements_parser.py # Requirements pipeline (doc → plan)
+│       │   ├── predictor.py         # Predictive intelligence (health reports)
+│       │   └── integration.py       # Fachada fail-safe
+│       ├── tools\                   # 15 herramientas MCP (incluye resolve_conflicts)
 │       ├── server\                  # MCPServer protocol
 │       ├── security\                # RateLimiter, sandbox
 │       ├── serena\                  # SerenaManager + native tools
@@ -895,6 +1006,12 @@ python run.py --quantum "TAREA" --quantum-angles "a,b" --json
 python run.py --multi-step plan.json --json
 python run.py --multi-step-inline '{"steps":[...]}' --json
 
+# Intelligence Package (v2.2)
+python run.py --requirements features.md --json
+python run.py --requirements features.md --auto-execute --json
+python run.py --health-report --json
+python run.py --health-report --project-context ./CLAUDE.md --json
+
 # Otros
 python run.py -q "pregunta rapida" --json
 python run.py --agent "meta autonoma" --json
@@ -906,6 +1023,9 @@ python run.py                            # Interactivo
 --project-context X   # CLAUDE.md del proyecto
 --config X            # Config alternativa
 --json                # Output JSON
+--requirements X      # v2.2: Documento de requisitos
+--auto-execute        # v2.2: Ejecutar plan auto-generado
+--health-report       # v2.2: Reporte de salud predictivo
 ```
 
 ---
@@ -926,6 +1046,16 @@ Tarea de codigo para DeepSeek?
 │
 ├── Multiples archivos independientes?
 │   └── Crear plan.json con steps      -> --multi-step plan.json --json
+│
+├── Documento de requisitos?
+│   ├── Solo generar plan              -> --requirements doc.md --json
+│   └── Generar y ejecutar plan        -> --requirements doc.md --auto-execute --json
+│
+├── Diagnostico del proyecto?
+│   └── Detectar tech debt y riesgos   -> --health-report --json
+│
+├── Conflictos de merge?
+│   └── MCP tool resolve_conflicts     -> detect/preview/resolve
 │
 └── Tarea autonoma con herramientas?
     └── Necesita leer/escribir archivos -> --agent "meta" --json

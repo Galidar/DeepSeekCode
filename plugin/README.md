@@ -4,15 +4,16 @@
 
 # ⚡ DeepSeek Code — Claude Code Plugin
 
-### **Give Claude Code a 128K-token AI partner with full system access**
+### **Give Claude Code a self-evolving 128K-token AI partner with full system access**
 
 <br>
 
 ![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-E87E04?style=for-the-badge)
 ![DeepSeek](https://img.shields.io/badge/DeepSeek-128K_Context-4F46E5?style=for-the-badge)
 ![Commands](https://img.shields.io/badge/Commands-5-22C55E?style=for-the-badge)
-![Skills](https://img.shields.io/badge/Knowledge-850+_lines-F59E0B?style=for-the-badge)
-![Version](https://img.shields.io/badge/v2.1.0-blue?style=for-the-badge)
+![Skills](https://img.shields.io/badge/Knowledge-1000+_lines-F59E0B?style=for-the-badge)
+![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
+![Version](https://img.shields.io/badge/v2.2.0-blue?style=for-the-badge)
 
 <br>
 
@@ -22,7 +23,7 @@
 
 ## What This Plugin Does
 
-This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, and conduct iterative dialogues. It includes a comprehensive 850+ line knowledge base covering every feature, mode, and configuration.
+This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package** for self-evolving code generation. It includes a comprehensive 1000+ line knowledge base covering every feature, mode, and configuration.
 
 ```mermaid
 graph LR
@@ -127,7 +128,7 @@ If you see the system status report, the plugin is working correctly.
 
 ## Knowledge Skill
 
-The plugin includes **deepseek-code-mastery** — a comprehensive 900+ line knowledge base that covers:
+The plugin includes **deepseek-code-mastery** — a comprehensive 1000+ line knowledge base that covers:
 
 | Topic | Coverage |
 |:-----:|:---------|
@@ -138,9 +139,10 @@ The plugin includes **deepseek-code-mastery** — a comprehensive 900+ line know
 | **Agent** | 100-step autonomous engine with tool access |
 | **Skills** | 3-tier injection system (core/domain/specialist, 80K budget) |
 | **Memory** | Surgical (per-project) + Global (cross-project) learning |
+| **🔮 Intelligence** | Introspective debugging, shadow learning, git conflicts, requirements pipeline, health reports |
 | **Session** | Web login (PoW/WASM), API keys, health check, multi-account |
 | **i18n** | English, Spanish, Japanese with fallback system |
-| **V3.2 Intelligence** | Auto-select model, thinking mode, smart chunking, scalable pool |
+| **V3.2** | Auto-select model, thinking mode, smart chunking, scalable pool |
 | **Configuration** | All config options, paths, environment variables |
 | **Troubleshooting** | Common errors, debugging, recovery procedures |
 
@@ -191,7 +193,7 @@ plugin/
     status.md                /deepseek-code:status command
   skills/
     deepseek-code-mastery/
-      SKILL.md               Complete knowledge base (~850 lines)
+      SKILL.md               Complete knowledge base (~1000 lines)
   README.md                  This file
 ```
 
@@ -201,7 +203,7 @@ plugin/
 
 <br>
 
-**DeepSeek Code Plugin** — Full AI-to-AI collaboration inside Claude Code.
+**DeepSeek Code Plugin v2.2** — Self-evolving AI-to-AI collaboration inside Claude Code.
 
 <br>
 

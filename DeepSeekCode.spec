@@ -43,6 +43,12 @@ hiddenimports = [
     'deepseek_code.global_memory', 'deepseek_code.global_memory.global_store',
     'deepseek_code.global_memory.global_learner', 'deepseek_code.global_memory.global_injector',
     'deepseek_code.global_memory.global_integration',
+    'deepseek_code.intelligence', 'deepseek_code.intelligence.debugger',
+    'deepseek_code.intelligence.shadow_learner', 'deepseek_code.intelligence.git_intel',
+    'deepseek_code.intelligence.requirements_parser', 'deepseek_code.intelligence.predictor',
+    'deepseek_code.intelligence.integration',
+    'deepseek_code.tools.git_conflict_tool',
+    'cli.intel_runner',
     # --- dependencias externas ---
     'aiofiles', 'openai', 'aiohttp', 'websockets', 'pydantic', 'structlog', 'yaml', 'requests',
     'rich', 'rich.console', 'rich.markdown', 'rich.panel', 'rich.prompt', 'rich.box', 'rich.theme',

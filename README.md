@@ -2,7 +2,7 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:4F46E5,50:7C3AED,100:E87E04&height=230&section=header&text=DeepSeek%20Code&fontSize=70&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=The%20AI-to-AI%20Collaboration%20Revolution&descSize=20&descAlignY=55&descAlign=50" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+128K+%2B+200K+Tokens.+Zero+Wasted+Context.;Delegate+heavy+code+to+DeepSeek+for+free.;Free+code+generation+with+self-learning+memory.)](https://github.com/Galidar/DeepSeekCode)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+128K+%2B+200K+Tokens.+Zero+Wasted+Context.;Learns+from+your+corrections.+Predicts+your+problems.;Free+code+generation+with+self-evolving+intelligence.)](https://github.com/Galidar/DeepSeekCode)
 
 <br><br>
 
@@ -12,11 +12,13 @@
 &nbsp;
 ![Claude](https://img.shields.io/badge/Claude_Code-Plugin-E87E04?style=for-the-badge)
 &nbsp;
-![MCP](https://img.shields.io/badge/MCP-14_Tools-22C55E?style=for-the-badge)
+![MCP](https://img.shields.io/badge/MCP-15_Tools-22C55E?style=for-the-badge)
 &nbsp;
 ![Skills](https://img.shields.io/badge/Skills-51_Domains-F59E0B?style=for-the-badge)
 &nbsp;
 ![i18n](https://img.shields.io/badge/i18n-EN_|_ES_|_JA-00B894?style=for-the-badge&logo=googletranslate&logoColor=white)
+&nbsp;
+![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
 &nbsp;
 ![License](https://img.shields.io/badge/License-AGPL--3.0-374151?style=for-the-badge)
 
@@ -28,9 +30,9 @@
 
 Most AI coding tools are **text chat in a box** — they can't touch your files, can't run commands, and forget everything after each session. Claude Code is powerful but burns through its 200K token context in 1-2 heavy tasks.
 
-DeepSeek Code changes that equation entirely. It's a **complete AI coding system** with its own file tools, shell access, knowledge base, and persistent memory — powered by DeepSeek's **128K token** context window (V3.2). Use it standalone from the terminal, or plug it into Claude Code so Claude can delegate the heavy code generation while keeping its own tokens free.
+DeepSeek Code changes that equation entirely. It's a **self-evolving AI coding system** with its own file tools, shell access, knowledge base, persistent memory, and an **Intelligence Package** that learns from your corrections, debugs its own failures, resolves git conflicts, converts requirement docs into executable plans, and predicts tech debt before it becomes a problem — all powered by DeepSeek's **128K token** context window (V3.2).
 
-The result? Claude orchestrates in ~5-15K tokens per task while DeepSeek does all the heavy lifting — and DeepSeek's generation is **free** with a web account.
+Use it standalone from the terminal, or plug it into Claude Code so Claude can delegate the heavy code generation while keeping its own tokens free. The result? Claude orchestrates in ~5-15K tokens per task while DeepSeek does all the heavy lifting — **for free** with a web account — and gets smarter with every delegation.
 
 <br>
 
@@ -48,11 +50,13 @@ graph TB
     SM --> DS
     GM --> DS
 
-    DS --> TOOLS["🔧 14 MCP Tools — read, write, edit, run"]
+    DS --> TOOLS["🔧 15 MCP Tools — read, write, edit, run, resolve conflicts"]
     DS --> VAL["✅ Validates — truncation, TODOs, style"]
+    DS --> INT["🔮 Intelligence Package — learns, predicts, debugs"]
 
     VAL -->|"pass"| RESULT["🏁 Code generated FREE — Claude tokens saved"]
-    VAL -.->|"fail → retry"| DS
+    VAL -.->|"fail → root cause"| INT
+    INT -.->|"targeted fix"| DS
     VAL -.->|"learn error"| SM
 
     style CC fill:#E87E04,stroke:#9A3412,color:#fff
@@ -62,6 +66,7 @@ graph TB
     style DS fill:#4F46E5,stroke:#3730A3,color:#fff
     style TOOLS fill:#F59E0B,stroke:#B45309,color:#fff
     style VAL fill:#22C55E,stroke:#15803D,color:#fff
+    style INT fill:#EF4444,stroke:#B91C1C,color:#fff
     style RESULT fill:#065F46,stroke:#047857,color:#fff
 ```
 
@@ -119,7 +124,7 @@ Every delegation returns a precise token report so you always know where the bud
 
 ## Not Just Delegation — A Complete System
 
-DeepSeek Code isn't a simple proxy to an API. It's a full coding environment with **14 native tools**, **51 knowledge skills**, **self-learning memory**, and **6 distinct operation modes**.
+DeepSeek Code isn't a simple proxy to an API. It's a full coding environment with **15 native tools**, **51 knowledge skills**, **self-evolving intelligence**, and **8 distinct operation modes**.
 
 <br>
 
@@ -145,9 +150,10 @@ graph TB
     MS --> DS
     CV --> DS
 
-    DS --> TOOLS["🔧 14 MCP Tools<br/>read · write · edit · run · find · archive"]
+    DS --> TOOLS["🔧 15 MCP Tools<br/>read · write · edit · run · resolve conflicts"]
     DS --> SKILLS["📚 51 Skills<br/>auto-injected by 46-keyword map"]
     DS --> MEM["🧬 Dual Memory<br/>surgical per-project + global cross-project"]
+    DS --> INTEL["🔮 Intelligence Package<br/>shadow learning · debugging · prediction"]
     DS --> AGENT["🤖 Autonomous Agent<br/>up to 100 self-correcting steps"]
     DS --> SERENA["🔍 Serena<br/>LSP + regex code navigation"]
 
@@ -163,6 +169,7 @@ graph TB
     style TOOLS fill:#F59E0B,stroke:#B45309,color:#fff
     style SKILLS fill:#F59E0B,stroke:#B45309,color:#fff
     style MEM fill:#EC4899,stroke:#BE185D,color:#fff
+    style INTEL fill:#EF4444,stroke:#B91C1C,color:#fff
     style AGENT fill:#EF4444,stroke:#B91C1C,color:#fff
     style SERENA fill:#8B5CF6,stroke:#6D28D9,color:#fff
 ```
@@ -175,15 +182,16 @@ graph TB
 
 <br>
 
-## 14 Real Tools, Not Just Chat
+## 15 Real Tools, Not Just Chat
 
-Every tool runs through the **MCP protocol** (JSON-RPC 2.0) with path sandboxing and command whitelisting. DeepSeek doesn't just suggest code — it reads your files, writes the changes, runs your build, and checks the output.
+Every tool runs through the **MCP protocol** (JSON-RPC 2.0) with path sandboxing and command whitelisting. DeepSeek doesn't just suggest code — it reads your files, writes the changes, runs your build, resolves your merge conflicts, and checks the output.
 
 | Category | Tools | What They Do |
 |:--------:|:-----:|:------------|
 | **File I/O** | `ReadFile` `WriteFile` `EditFile` `CopyFile` `MoveFile` `DeleteFile` | Full file system access with surgical line-level editing |
 | **Navigation** | `ListDirectory` `FindFiles` `FileInfo` `MakeDirectory` | Search by pattern, get metadata, create paths |
 | **System** | `RunCommand` `Archive` `Memory` `ManageKeys` | Shell execution, ZIP/TAR, persistent notes, API key rotation |
+| **Intelligence** | `ResolveConflicts` | AI-powered git merge conflict detection and resolution |
 
 All sandboxed with configurable `allowed_paths` and `allowed_commands`.
 
@@ -272,11 +280,81 @@ Both are fail-safe: if anything goes wrong, they return empty without interrupti
 
 <br>
 
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:EF4444,100:F59E0B&height=1&section=header" width="100%"/>
+
+<br>
+
+## Intelligence Package — The AI That Evolves
+
+This is what no other AI coding tool has. Five features that transform DeepSeek Code from a code generator into a **self-evolving intelligence**:
+
+<br>
+
+<div align="center">
+
+```mermaid
+graph TB
+    FAIL["❌ Delegation fails"] --> DBG["🔍 Introspective Debugger<br/>root cause analysis, not blind retry"]
+    DBG -->|"targeted fix strategy"| RETRY["✅ Smart retry succeeds"]
+
+    COMMIT["📝 User commits corrections"] --> SHADOW["👁️ Shadow Learner<br/>detects patterns via git diff"]
+    SHADOW -->|"injects learned rules"| NEXT["⚡ Next delegation<br/>already knows your preferences"]
+
+    MERGE["⚔️ Git merge conflict"] --> GIT["🔧 Git Intelligence<br/>AI-powered conflict resolution"]
+    GIT -->|"resolve with context"| CLEAN["✅ Clean merge"]
+
+    REQS["📋 Requirements doc"] --> PARSE["📊 Requirements Pipeline<br/>topological sort + parallel groups"]
+    PARSE -->|"auto-execute"| PLAN["🚀 Multi-step plan runs"]
+
+    HEALTH["🏥 Health report request"] --> PRED["🔮 Predictive Intelligence<br/>tech debt · LOC risks · error clusters"]
+    PRED -->|"prioritized actions"| SAFE["💚 Project stays healthy"]
+
+    style FAIL fill:#EF4444,stroke:#B91C1C,color:#fff
+    style DBG fill:#F59E0B,stroke:#B45309,color:#fff
+    style RETRY fill:#22C55E,stroke:#15803D,color:#fff
+    style COMMIT fill:#6B7280,stroke:#374151,color:#fff
+    style SHADOW fill:#8B5CF6,stroke:#6D28D9,color:#fff
+    style NEXT fill:#4F46E5,stroke:#3730A3,color:#fff
+    style MERGE fill:#EF4444,stroke:#B91C1C,color:#fff
+    style GIT fill:#0EA5E9,stroke:#0369A1,color:#fff
+    style CLEAN fill:#22C55E,stroke:#15803D,color:#fff
+    style REQS fill:#6B7280,stroke:#374151,color:#fff
+    style PARSE fill:#7C3AED,stroke:#5B21B6,color:#fff
+    style PLAN fill:#4F46E5,stroke:#3730A3,color:#fff
+    style HEALTH fill:#6B7280,stroke:#374151,color:#fff
+    style PRED fill:#EC4899,stroke:#BE185D,color:#fff
+    style SAFE fill:#22C55E,stroke:#15803D,color:#fff
+```
+
+</div>
+
+<br>
+
+| Feature | What It Does | How It Works |
+|:-------:|:------------|:------------|
+| **🔍 Introspective Debugging** | When a delegation fails, analyzes the **root cause** instead of blind retry | Correlates with error history, identifies patterns (truncation, missing TODOs), generates targeted fix strategies with confidence scores |
+| **👁️ Shadow Learning** | Learns from your **manual corrections** automatically | Compares DeepSeek's output with what you actually committed via `git diff`. Detects 7 correction patterns and injects them into future delegations |
+| **🔧 Git Intelligence** | Resolves **merge conflicts** with AI context | MCP tool `resolve_conflicts` with detect/preview/resolve actions. Heuristic fallback + AI resolution with full project context |
+| **📊 Requirements Pipeline** | Converts a **requirements document** into an executable plan | Parses markdown, detects priorities (MUST/SHOULD/COULD) and dependencies, generates topologically-sorted multi-step plans |
+| **🔮 Predictive Intelligence** | Detects **tech debt** and predicts problems before they happen | Scans for files near LOC limits, clusters recurring errors, detects worsening trends, generates health reports with risk levels |
+
+```bash
+# Convert requirements doc to executable plan
+python run.py --requirements features.md --auto-execute --json
+
+# Get predictive health report
+python run.py --health-report --json
+```
+
+All five features are **fail-safe** — if any intelligence module errors, the main delegation flow continues without interruption. They're not bolted on; they're woven into every delegation cycle.
+
+<br>
+
 <img src="https://capsule-render.vercel.app/api?type=rect&color=0:4F46E5,100:7C3AED&height=1&section=header" width="100%"/>
 
 <br>
 
-## Six Ways to Work
+## Eight Ways to Work
 
 <br>
 
@@ -322,6 +400,20 @@ python run.py --converse "build the audio system" --json
 
 <br>
 
+**📋 Requirements Pipeline** — Feed a requirements document. DeepSeek parses it, detects priorities and dependencies, generates a topologically-sorted plan, and optionally executes it automatically.
+```bash
+python run.py --requirements features.md --auto-execute --json
+```
+
+<br>
+
+**🔮 Health Report** — Predictive intelligence that scans your project for tech debt, LOC risks, error clusters, and worsening trends. Outputs prioritized recommendations.
+```bash
+python run.py --health-report --json
+```
+
+<br>
+
 <img src="https://capsule-render.vercel.app/api?type=rect&color=0:4F46E5,100:7C3AED&height=1&section=header" width="100%"/>
 
 <br>
@@ -334,7 +426,7 @@ Every response passes through a validation engine that checks for:
 - **Missing TODOs** — if the template had `// TODO: implement X` and it wasn't filled → triggers retry with feedback
 - **Code style violations** — enforces your project's rules from `CLAUDE.md` → logs the error to Surgical Memory for next time
 
-Errors aren't just caught — they're **learned**. The next delegation won't make the same mistake.
+Errors aren't just caught — they're **analyzed**. The Introspective Debugger identifies root causes, correlates with historical patterns, and generates targeted fix strategies. The next delegation won't make the same mistake — and neither will the one after that.
 
 <br>
 
@@ -388,6 +480,8 @@ Two authentication modes:
 
 ## Also Includes
 
+**🔮 Intelligence Package** — 5 revolutionary features: introspective debugging (root cause analysis), shadow learning (learns from your git corrections), git conflict resolution (AI-powered MCP tool), requirements pipeline (document to plan), predictive intelligence (tech debt detection and health reports).
+
 **🔍 Serena** — Symbolic code navigation with two modes: external `serena-agent` (LSP-powered) or a built-in regex engine that extracts classes, functions, and methods across Python, JavaScript, TypeScript, Java, Go, and Rust.
 
 **🌐 i18n** — 155 translation keys across English (full), Spanish (full), and Japanese (36 keys + automatic English fallback). Language selector on first run, switchable anytime with `/lang`.
@@ -425,7 +519,7 @@ cp -r plugin/ ~/.claude/plugins/marketplaces/local-desktop-app-uploads/deepseek-
 
 Then use `/deepseek-code:delegate`, `/deepseek-code:quantum`, `/deepseek-code:multi-step`, `/deepseek-code:converse`, or `/deepseek-code:status`.
 
-The plugin includes an 850+ line knowledge base so Claude knows exactly how to operate the system.
+The plugin includes a 1000+ line knowledge base so Claude knows exactly how to operate the system — including all Intelligence Package features.
 
 <br>
 
@@ -433,8 +527,8 @@ The plugin includes an 850+ line knowledge base so Claude knows exactly how to o
 
 <div align="center">
 
-**DeepSeek Code** — Two AIs, free code generation, zero wasted context.
+**DeepSeek Code** — Two AIs, self-evolving intelligence, free code generation.
 
-Built with 🧠 Claude Code + ⚡ DeepSeek + 🔧 MCP Protocol
+Built with 🧠 Claude Code + ⚡ DeepSeek + 🔧 MCP Protocol + 🔮 Intelligence Package
 
 </div>
