@@ -31,7 +31,7 @@ import sys
 import time
 from typing import Dict, List
 
-from cli.config_loader import load_config, SKILLS_DIR
+from cli.config_loader import load_config, APPDATA_DIR, SKILLS_DIR
 from cli.bridge_utils import (
     redirect_output, restore_output, output_json, output_text,
     create_app, load_file_safe, check_credentials, handle_no_credentials,
@@ -137,19 +137,39 @@ def _build_context_from_results(
     return "\n== CONTEXTO DE PASOS PREVIOS ==\n" + "".join(parts) + "\n== FIN CONTEXTO ==\n"
 
 
+def _build_enriched_for_dual(base_system: str, injections: list) -> str:
+    """Reconstruye enriched_system para dual mode (stateless por diseno).
+
+    Dual mode usa 2 clientes paralelos independientes que no soportan
+    el protocolo 3-fases. Se concatena base + inyecciones en un solo prompt.
+    """
+    parts = [base_system]
+    for inj in injections:
+        parts.append(f"\n{inj['content']}")
+    return "\n".join(parts)
+
+
 async def _execute_step(
     app, step: StepSpec, completed: Dict[str, StepResult], config: dict,
 ) -> StepResult:
     """Ejecuta un paso individual del plan (async).
 
-    Si el paso tiene dual_mode=True, usa DualSession para ejecucion paralela.
+    Usa SessionOrchestrator + chat_in_session para respetar el protocolo
+    3-fases (system prompt -> injections -> user message).
+    Si el paso tiene dual_mode=True, usa DualSession (stateless por diseno).
     """
     result = StepResult(step.id)
     start_time = time.time()
 
     try:
-        from deepseek_code.agent.prompts import DELEGATE_SYSTEM_PROMPT, build_delegate_prompt
-        from deepseek_code.skills.skill_injector import build_delegate_skills_context
+        from deepseek_code.agent.prompts import build_delegate_prompt
+        from deepseek_code.client.prompt_builder import assemble_delegate_prompt
+        from deepseek_code.sessions.session_orchestrator import SessionOrchestrator
+        from deepseek_code.client.session_chat import get_session_store
+        from deepseek_code.surgical.integration import post_delegation
+        from deepseek_code.global_memory.global_integration import (
+            global_post_delegation, get_injected_skill_names, detect_project_name,
+        )
 
         template = None
         if step.template_path:
@@ -157,27 +177,40 @@ async def _execute_step(
 
         prev_context = _build_context_from_results(step.context_from, completed)
         skills_dir = config.get("skills_dir", SKILLS_DIR)
-        skills_extra = build_delegate_skills_context(
-            skills_dir, step.task + (" " + template[:500] if template else "")
+        appdata_dir = config.get("_appdata_dir", APPDATA_DIR)
+        task_text = step.task + (" " + template[:500] if template else "")
+
+        # Ensamblar system prompt modular
+        base_system = assemble_delegate_prompt(
+            has_template=template is not None,
+            is_quantum=step.dual_mode,
         )
-        # SurgicalMemory: inyectar contexto del proyecto
-        from deepseek_code.surgical.integration import pre_delegation, post_delegation
-        surgical_briefing, surgical_store = pre_delegation(
-            config.get("_appdata_dir", ""), step.task,
+        if prev_context:
+            base_system += prev_context
+
+        # Orchestrator: detecta skills, surgical, global como inyecciones separadas
+        orchestrator = SessionOrchestrator(
+            get_session_store(), skills_dir=skills_dir, appdata_dir=appdata_dir,
+        )
+        call_params = orchestrator.prepare_session_call(
+            mode="multistep",
+            identifier=step.id,
+            user_message=step.task,
+            base_system_prompt=base_system,
+            task_text=task_text,
             template_path=step.template_path,
         )
-        # GlobalMemory: inyectar perfil personal cross-proyecto
-        from deepseek_code.global_memory.global_integration import (
-            global_pre_delegation, global_post_delegation,
-            get_injected_skill_names, detect_project_name,
-        )
-        global_briefing, global_store = global_pre_delegation(
-            config.get("_appdata_dir", ""), step.task,
-        )
-        enriched_system = DELEGATE_SYSTEM_PROMPT + skills_extra + surgical_briefing + global_briefing
 
-        if prev_context:
-            enriched_system += prev_context
+        surgical_store = call_params.get("surgical_store")
+        global_store = call_params.get("global_store")
+        session_name = call_params["session_name"]
+        pending_injections = call_params["pending_injections"]
+
+        print(
+            f"  [{step.id}] Sesion '{session_name}' "
+            f"(inyecciones: {len(pending_injections)})",
+            file=sys.stderr,
+        )
 
         current_feedback = step.feedback
 
@@ -188,14 +221,23 @@ async def _execute_step(
             )
 
             if step.dual_mode:
+                # Dual: stateless, 2 clientes paralelos. No usa protocolo 3-fases.
+                enriched = _build_enriched_for_dual(
+                    base_system, pending_injections,
+                )
                 response = await execute_step_dual(
-                    config, app.mcp_server, user_prompt, enriched_system,
+                    config, app.mcp_server, user_prompt, enriched,
                     step.task, template,
                 )
             else:
-                response = await app.client.chat_with_system(
-                    user_prompt, enriched_system,
+                # Normal: protocolo 3-fases via chat_in_session
+                response = await app.client.chat_in_session(
+                    session_name, user_prompt,
+                    call_params["system_prompt"],
+                    pending_injections=pending_injections,
                 )
+                # Injections solo se envian en la primera llamada
+                pending_injections = None
 
             if step.validate and template:
                 from cli.delegate_validator import validate_delegate_response
@@ -221,7 +263,7 @@ async def _execute_step(
         result.success = True
         result.response = response
 
-        # SurgicalMemory: registrar resultado
+        # Post-delegation: registrar resultado para aprendizaje
         step_valid = result.validation.get("valid", True) if result.validation else True
         step_trunc = result.validation.get("truncated", False) if result.validation else False
         post_delegation(
@@ -229,7 +271,6 @@ async def _execute_step(
             step_valid and not step_trunc,
             response, result.validation, time.time() - start_time,
         )
-        # GlobalMemory: registrar resultado cross-proyecto
         global_post_delegation(
             global_store, step.task, "multi_step",
             step_valid and not step_trunc,

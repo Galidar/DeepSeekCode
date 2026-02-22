@@ -7,6 +7,10 @@ Implementa un dialogo de 3 fases para delegaciones:
 
 El protocolo es opt-in: solo se activa para tareas que lo ameriten.
 Para tareas simples se salta directamente a ejecucion.
+
+v2.6.1: Migrado a chat_in_session con protocolo 3-fases
+(system prompt -> injections -> user message). Elimina manipulacion
+manual de conversation_history.
 """
 
 import sys
@@ -25,12 +29,17 @@ async def run_collaborative_delegation(
     enable_review: bool = True,
     max_review_rounds: int = 2,
     max_continuations: int = 3,
+    session_name: str = None,
+    pending_injections: list = None,
 ) -> Tuple[str, int, Optional[dict]]:
     """Delegacion colaborativa con briefing y review.
 
     Fase 1: Briefing (opt-in) — contextualiza a DeepSeek
     Fase 2: Ejecucion — la delegacion real
     Fase 3: Review (opt-in) — revisa y corrige iterativamente
+
+    Usa chat_in_session para respetar el protocolo 3-fases de DeepSeek web.
+    La sesion mantiene estado automaticamente entre llamadas.
 
     Args:
         app: DeepSeekCodeApp con client configurado
@@ -44,24 +53,31 @@ async def run_collaborative_delegation(
         enable_review: Si True, revisa y pide correcciones
         max_review_rounds: Maximo de rondas de review
         max_continuations: Maximo de auto-continuaciones por truncamiento
+        session_name: Nombre de sesion (default: collab_{task_slug})
+        pending_injections: Inyecciones de contexto para protocolo 3-fases
 
     Returns:
         Tupla (respuesta_final, total_continuaciones, validacion)
     """
     from deepseek_code.agent.prompts import build_delegate_prompt
+    from deepseek_code.sessions.session_namespace import slugify
     from cli.oneshot_helpers import strip_markdown_fences
 
-    # Configurar historial como conversacion multi-turno
-    app.client.system_message = system_prompt
-    app.client.conversation_history = [
-        {"role": "system", "content": system_prompt}
-    ]
+    # Determinar nombre de sesion
+    collab_session = session_name or f"collab_{slugify(task)}"
 
     # === FASE 1: Briefing ===
     if enable_briefing and project_context:
         briefing_msg = _build_briefing_message(task, project_context)
         print("  [collab] Fase 1: Briefing pre-tarea...", file=sys.stderr)
-        briefing_response = await app.client.chat(briefing_msg)
+        briefing_response = await app.client.chat_in_session(
+            collab_session, briefing_msg,
+            system_prompt,
+            pending_injections=pending_injections,
+        )
+        # System prompt e injections ya enviados en briefing
+        system_prompt = None
+        pending_injections = None
         print(
             f"  [collab] Briefing: DeepSeek confirmo ({len(briefing_response)} chars)",
             file=sys.stderr,
@@ -77,14 +93,16 @@ async def run_collaborative_delegation(
     if template and should_chunk(template, chunk_threshold):
         response, continuations = await _execute_chunked(
             app, task, template, context, feedback,
-            system_prompt, max_continuations, chunk_threshold,
+            collab_session, system_prompt, pending_injections,
+            max_continuations, chunk_threshold,
         )
     else:
         user_prompt = build_delegate_prompt(
             task, template=template, context=context, feedback=feedback,
         )
         response, continuations = await _execute_with_continuation(
-            app, user_prompt, system_prompt, max_continuations,
+            app, user_prompt, collab_session, system_prompt,
+            pending_injections, max_continuations,
         )
     response = strip_markdown_fences(response)
 
@@ -92,7 +110,7 @@ async def run_collaborative_delegation(
     validation = None
     if enable_review and template:
         response, validation = await _review_phase(
-            app, response, template, max_review_rounds,
+            app, response, template, collab_session, max_review_rounds,
         )
 
     return response, continuations, validation
@@ -100,13 +118,15 @@ async def run_collaborative_delegation(
 
 async def _execute_chunked(
     app, task: str, template: str, context: str,
-    feedback: str, system_prompt: str,
+    feedback: str, session_name: str, system_prompt: str,
+    pending_injections: list,
     max_continuations: int, chunk_threshold: int,
 ) -> Tuple[str, int]:
     """Ejecuta delegacion chunkeada para templates grandes.
 
     Divide el template en chunks logicos y ejecuta cada uno
     secuencialmente, pasando el output anterior como contexto.
+    Todas las llamadas usan la misma sesion para mantener estado.
 
     Returns:
         (respuesta_concatenada, total_continuaciones)
@@ -133,8 +153,13 @@ async def _execute_chunked(
         )
 
         part, conts = await _execute_with_continuation(
-            app, user_prompt, system_prompt, max_continuations,
+            app, user_prompt, session_name, system_prompt,
+            pending_injections, max_continuations,
         )
+        # System prompt e injections solo en la primera llamada
+        system_prompt = None
+        pending_injections = None
+
         all_parts.append(part)
         total_conts += conts
         previous_output = part
@@ -148,18 +173,25 @@ async def _execute_chunked(
 
 
 async def _execute_with_continuation(
-    app, user_prompt: str, system_prompt: str, max_continuations: int = 3,
+    app, user_prompt: str, session_name: str, system_prompt: str = None,
+    pending_injections: list = None, max_continuations: int = 3,
 ) -> Tuple[str, int]:
     """Ejecuta delegacion con auto-continuacion por truncamiento.
 
-    Detecta respuestas truncadas y envia 'continua' para completar.
+    Usa chat_in_session para mantener estado de sesion. Detecta
+    respuestas truncadas y envia 'continua' en la misma sesion.
 
     Returns:
         (respuesta_completa, num_continuaciones)
     """
     from cli.delegate_validator import _detect_truncation
 
-    response = await app.client.chat_with_system(user_prompt, system_prompt)
+    # Primera llamada: con system_prompt e injections si es nueva sesion
+    response = await app.client.chat_in_session(
+        session_name, user_prompt,
+        system_prompt,
+        pending_injections=pending_injections,
+    )
     parts = [response]
     continuation_count = 0
 
@@ -175,30 +207,29 @@ async def _execute_with_continuation(
             file=sys.stderr,
         )
 
-        app.client.conversation_history.append(
-            {"role": "assistant", "content": response}
-        )
         continue_msg = (
             "Continua EXACTAMENTE donde te quedaste. "
             "No repitas codigo anterior. Empieza desde la ultima linea."
         )
-        app.client.conversation_history.append(
-            {"role": "user", "content": continue_msg}
-        )
 
-        response = await app.client.chat_with_system(continue_msg, system_prompt)
+        # Continuacion: sesion ya tiene estado, no necesita system_prompt
+        response = await app.client.chat_in_session(
+            session_name, continue_msg,
+        )
         parts.append(response)
 
     return "\n".join(parts), continuation_count
 
 
 async def _review_phase(
-    app, response: str, template: str, max_rounds: int = 2,
+    app, response: str, template: str, session_name: str,
+    max_rounds: int = 2,
 ) -> Tuple[str, Optional[dict]]:
     """Fase 3: Review iterativo.
 
     Claude analiza la respuesta y si hay problemas,
     los comunica a DeepSeek para que los corrija.
+    Usa la misma sesion para mantener contexto de la conversacion.
 
     Returns:
         (respuesta_final, ultimo_validation)
@@ -235,17 +266,9 @@ async def _review_phase(
             file=sys.stderr,
         )
 
-        # Enviar review a DeepSeek (en la misma conversacion)
-        app.client.conversation_history.append(
-            {"role": "assistant", "content": response}
-        )
-        app.client.conversation_history.append(
-            {"role": "user", "content": review_msg}
-        )
-
-        corrected = await app.client.chat_with_system(
-            review_msg,
-            app.client.system_message,
+        # Review en la misma sesion (mantiene contexto automaticamente)
+        corrected = await app.client.chat_in_session(
+            session_name, review_msg,
         )
         response = strip_markdown_fences(corrected)
         validation = validate_delegate_response(response, template)
