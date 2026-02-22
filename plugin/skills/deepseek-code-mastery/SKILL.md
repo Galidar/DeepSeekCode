@@ -1,6 +1,6 @@
 ---
 name: deepseek-code-mastery
-description: Referencia completa para operar DeepSeek Code como sistema multi-agente subordinado a Claude Code. v2.1 incluye V3.2 auto-select model (deepseek-reasoner para codigo complejo), thinking mode web, smart template chunking, pool escalable (2-10 instancias), max_tokens adaptivo, multi-session con roles, prompts adaptativos, quantum dual, multi-step, surgical memory, global memory, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
+description: Referencia completa para operar DeepSeek Code (128K contexto, V3.2) como sistema multi-agente subordinado a Claude Code. v2.1 incluye V3.2 auto-select model (deepseek-reasoner para codigo complejo, 64K output), thinking mode web, smart template chunking, max_tokens adaptivo, dual quantum sessions, multi-step, surgical memory, global memory, y protocolo de colaboracion 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
 ---
 
 # DeepSeek Code Mastery — Guia Completa para Claude Code
@@ -92,19 +92,18 @@ EXE:         <DEEPSEEK_DIR>/dist/DeepSeekCode.exe     (si se compilo con PyInsta
   "skills_dir": "...",         // Directorio de skills
   "auto_select_model": true,   // Auto deepseek-reasoner para CODE_COMPLEX+DELEGATION
   "thinking_enabled": true,    // Thinking mode en web sessions para codigo
-  "pool_size": 5,              // Max instancias paralelas Quantum (2-10)
+  "pool_size": 5,              // Pool size para futuro multi-session (2-10, quantum actual usa 2)
   "chunk_threshold_tokens": 30000  // Umbral para chunking de templates
 }
 ```
 
-### Autenticacion (Solo Modo Web)
+### Autenticacion
 
-DeepSeek Code opera **exclusivamente en modo web** (1M tokens de contexto). No se usa API.
+DeepSeek Code soporta **dos modos**: web (gratis) y API (pagado). Ambos usan DeepSeek V3.2 con **128K tokens de contexto**.
 
-- Usa `bearer_token` + `cookies` + WASM para firmar requests
-- Login via `/login` en modo interactivo (PyQt5 WebEngine)
-- Tokens expiran cada ~24-48h, re-login automatico si falla
-- **1,000,000 tokens de contexto** — aprovechar al maximo con skills generosas
+- **Modo Web**: `bearer_token` + `cookies` + WASM para firmar requests. Login via `/login` (PyQt5 WebEngine). Tokens expiran cada ~24-48h, re-login automatico si falla. **Gratis**.
+- **Modo API**: `api_key` de platform.deepseek.com. Pago por tokens.
+- **128,000 tokens de contexto** — las skills se inyectan generosamente (hasta 80K) dejando espacio para template + respuesta
 
 ---
 
@@ -179,8 +178,8 @@ python run.py --delegate "TAREA" [opciones] --json
     "total_input": 46950,
     "response_estimated": 8500,
     "total_estimated": 55450,
-    "context_remaining": 944550,
-    "context_used_percent": "5.5%"
+    "context_remaining": 81050,
+    "context_used_percent": "36.7%"
   }
 }
 ```
@@ -189,7 +188,7 @@ python run.py --delegate "TAREA" [opciones] --json
 - `success: false` + `validation.truncated: true` = respuesta cortada, reducir scope
 - `success: false` + `validation.todos_missing: ["renderMap"]` = TODOs no completados
 - `success: true` + `response` = codigo listo para usar
-- `token_usage.context_used_percent` = cuanto del 1M se consumio (ideal: <10%)
+- `token_usage.context_used_percent` = cuanto del 128K se consumio
 - `token_usage.skills_injected` = tokens de conocimiento inyectado
 
 ### Cuando Usar --template vs Tarea Libre
@@ -379,31 +378,32 @@ DeepSeek Code tiene un sistema de inyeccion automatica de conocimiento en 3 nive
 - Skills de nicho que puntuaron pero no entraron en Tier 2
 - Con 20K tokens, pueden entrar 2-3 skills adicionales
 
-### Budget de Tokens (1M Contexto Web)
+### Budget de Tokens (128K Contexto)
 
-DeepSeek Web tiene **1,000,000 tokens de contexto**. La estrategia es aprovecharlo
-al maximo inyectando conocimiento generoso sin miedo de quedarnos cortos.
+DeepSeek V3.2 tiene **128,000 tokens de contexto**. El budget de skills esta
+diseñado para maximizar conocimiento inyectado dejando espacio para template y respuesta.
 
 ```
-Modo Delegacion (1M contexto web):
+Modo Delegacion (128K contexto):
   Core:       15,000 tokens (siempre presente, ~60K chars)
   Domain:     45,000 tokens (por relevancia, ~180K chars)
   Specialist: 20,000 tokens (si hay espacio, ~80K chars)
-  TOTAL:      80,000 tokens para skills (~320K chars, 8% del contexto)
+  TOTAL:      80,000 tokens para skills (~320K chars, 62.5% del contexto)
 
   + DELEGATE_SYSTEM_PROMPT:  ~7,000 tokens
   + SurgicalMemory briefing: ~3,000 tokens
   + GlobalMemory briefing:   ~2,000 tokens
   + Template + context:      variable
-  = ~92,000 tokens de sistema (~9% del contexto de 1M)
-  = 908,000 tokens disponibles para la respuesta de DeepSeek
+  = ~92,000 tokens de sistema (~72% del contexto de 128K)
+  = ~36,000 tokens disponibles para la respuesta de DeepSeek
 
-Modo Interactivo Web (1M contexto): 80,000 tokens para skills
+Modo Interactivo (128K contexto): 80,000 tokens para skills
 ```
 
-**Estrategia**: Con 1M tokens, podemos inyectar TODO el conocimiento relevante.
-No hay necesidad de ser conservadores — es mejor sobre-informar a DeepSeek que
-dejar skills utiles fuera.
+**Nota**: Con 128K de contexto, el budget de 80K para skills es agresivo.
+En tareas con templates grandes, el sistema auto-reduce skills inyectadas
+para dejar espacio. Para delegaciones simples sin template, el budget completo
+funciona bien. `deepseek-reasoner` da hasta 64K output (incluyendo chain-of-thought).
 
 ### Skills Disponibles (51 total)
 
@@ -513,7 +513,7 @@ DELEGATE_SYSTEM_PROMPT       (~7K tokens, base)
 + skills_extra               (~80K tokens, skills 3-tier)
 + surgical_briefing          (~3K tokens, contexto del proyecto)
 + global_briefing            (~2K tokens, perfil personal)
-= enriched_system            (~92K tokens, ~9% del contexto 1M)
+= enriched_system            (~92K tokens, ~72% del contexto 128K)
 ```
 
 ---
@@ -585,16 +585,20 @@ Templates >30K tokens se dividen automaticamente en chunks por bloques TODO:
 
 Umbral configurable: `"chunk_threshold_tokens": 30000` en config.json.
 
-### Pool de Instancias (Quantum)
+### Sesiones Paralelas (Quantum)
+
+Quantum Bridge usa `DualSession` con 2 clientes en paralelo.
+La funcion `create_pool_clients(N)` esta disponible en quantum_helpers.py
+para futuras implementaciones multi-session, pero actualmente el runner
+quantum solo usa 2 sesiones.
 
 ```python
-# quantum_helpers.py crea N clientes compartiendo MCPServer
+# quantum_helpers.py - disponible para uso futuro
 from cli.quantum_helpers import create_pool_clients
 clients = create_pool_clients(config, mcp_server)  # Default: 5
 ```
 
-Configurable via `"pool_size": N` (clamp: 2-10).
-Cada cliente tiene su propia sesion web pero comparte herramientas MCP.
+Config `"pool_size": N` (clamp: 2-10) para cuando se integre multi-session.
 
 ---
 
@@ -669,7 +673,7 @@ python run.py --delegate "componente React TypeScript de tabla paginada con sort
 ### Truncamiento (respuesta cortada)
 
 **Sintoma:** `validation.truncated: true`, respuesta incompleta
-**Causa:** DeepSeek tiene limite de tokens de respuesta (~4K-8K)
+**Causa:** deepseek-chat tiene limite de 8K output (4K default). deepseek-reasoner soporta hasta 64K output (incluye CoT).
 **Soluciones:**
 1. Usar `--template` para que solo responda los TODOs (no repita codigo)
 2. Reducir numero de TODOs en el template
@@ -721,9 +725,9 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 ### Architecture
 
 - **`cli/i18n.py`**: Central module with `t(key, **kwargs)` function
-- **138 translated keys** across 5 CLI files
+- **155 translated keys** across EN and ES, 36 for JA
 - **Fallback chain**: current_lang → English → raw key
-- **Japanese**: 35 most visible keys translated, rest falls back to English
+- **Japanese**: 36 most visible keys translated, rest falls back to English
 - **Persistence**: `"lang"` field in `config.json`
 
 ### Adding Translations
@@ -799,13 +803,13 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 
 ---
 
-## 12. Gestion Estrategica de Tokens (1M Budget)
+## 12. Gestion Estrategica de Tokens (128K Budget)
 
-### Contexto: 1M Tokens Disponibles
+### Contexto: 128K Tokens Disponibles
 
-DeepSeek Web ofrece **1,000,000 tokens de contexto** — un recurso masivo que debemos
-exprimir estrategicamente. La clave es: inyectar todo el conocimiento posible sin
-desperdiciar en contenido irrelevante.
+DeepSeek V3.2 ofrece **128,000 tokens de contexto** (tanto API como web). La clave
+es inyectar el conocimiento justo para la tarea, equilibrando skills con espacio
+para template y respuesta.
 
 ### Desglose del Consumo por Delegacion
 
@@ -824,8 +828,8 @@ Template (si existe)         variable            len(template) / 3.5
 Context file (si existe)     variable            len(context) / 3.5
 User prompt                  ~100-500            len(task) / 3.5
 ─────────────────────────────────────────────────────────
-TOTAL SISTEMA:              ~20,000-92,000       (2-9% del contexto)
-DISPONIBLE RESPUESTA:       ~908,000-980,000     (91-98% del contexto)
+TOTAL SISTEMA:              ~20,000-92,000       (16-72% del contexto)
+DISPONIBLE RESPUESTA:       ~36,000-108,000      (28-84% del contexto)
 ```
 
 ### JSON de Respuesta con token_usage
@@ -847,8 +851,8 @@ El JSON de delegacion incluye un campo `token_usage` con el desglose:
     "total_input": 46950,
     "response_estimated": 8500,
     "total_estimated": 55450,
-    "context_remaining": 944550,
-    "context_used_percent": "5.5%"
+    "context_remaining": 81050,
+    "context_used_percent": "36.7%"
   }
 }
 ```
@@ -863,12 +867,13 @@ Para calcular manualmente: `tokens ≈ caracteres / 3.5`
 
 ### Optimizacion del Budget
 
-**Regla general**: Si la tarea es compleja, usar mas skills. Si es simple, ahorrar.
+**Regla general**: Equilibrar skills inyectadas con espacio para respuesta.
+Con 128K de contexto, ser selectivo con skills para tareas con templates grandes.
 
-- **Tarea simple** (1 funcion): Core + 1-2 Domain = ~25K tokens input
-- **Tarea media** (1 archivo): Core + 3-4 Domain = ~40K tokens input
-- **Tarea compleja** (multi-aspecto): Core + 5-8 Domain + Specialist = ~80K tokens input
-- **Quantum** (2 sesiones): Cada sesion consume su propio budget = ~160K total
+- **Tarea simple** (1 funcion): Core + 1-2 Domain = ~25K input, ~103K para respuesta
+- **Tarea media** (1 archivo): Core + 3-4 Domain = ~40K input, ~88K para respuesta
+- **Tarea compleja** (multi-aspecto): Core + 5-8 Domain = ~60K input, ~68K para respuesta
+- **Quantum** (2 sesiones): Cada sesion tiene su propio contexto de 128K
 
 ---
 

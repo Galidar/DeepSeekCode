@@ -4,12 +4,12 @@
 
 # ⚡ DeepSeek Code — Claude Code Plugin
 
-### **Give Claude Code a 1M-token AI partner with full system access**
+### **Give Claude Code a 128K-token AI partner with full system access**
 
 <br>
 
 ![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-E87E04?style=for-the-badge)
-![DeepSeek](https://img.shields.io/badge/DeepSeek-1M_Context-4F46E5?style=for-the-badge)
+![DeepSeek](https://img.shields.io/badge/DeepSeek-128K_Context-4F46E5?style=for-the-badge)
 ![Commands](https://img.shields.io/badge/Commands-5-22C55E?style=for-the-badge)
 ![Skills](https://img.shields.io/badge/Knowledge-850+_lines-F59E0B?style=for-the-badge)
 ![Version](https://img.shields.io/badge/v2.1.0-blue?style=for-the-badge)
@@ -26,7 +26,7 @@ This plugin gives Claude Code **complete operational knowledge** of the DeepSeek
 
 ```mermaid
 graph LR
-    CC[🧠 Claude Code<br/>with Plugin] -->|"/deepseek-code:delegate"| DS[⚡ DeepSeek Code<br/>1M tokens]
+    CC[🧠 Claude Code<br/>with Plugin] -->|"/deepseek-code:delegate"| DS[⚡ DeepSeek Code<br/>128K tokens]
     CC -->|"/deepseek-code:quantum"| QB{Quantum Bridge}
     CC -->|"/deepseek-code:multi-step"| MS[Multi-Step]
     CC -->|"/deepseek-code:converse"| CV[Conversational]

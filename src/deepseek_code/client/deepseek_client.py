@@ -24,10 +24,11 @@ from .prompt_builder import build_adaptive_system_prompt
 from .api_caller import build_api_params
 
 # Limites de contexto segun modo de operacion
-# API: 128K tokens (deepseek-chat via API)
-# Web (App/Chat): ~1M tokens (interfaz web de DeepSeek)
+# API: 128K tokens (deepseek-chat/deepseek-reasoner via API oficial)
+# Web (App/Chat): El modelo es 128K pero usamos un limite alto para no truncar
+#   prematuramente — la interfaz web de DeepSeek maneja su propio contexto.
 API_MAX_TOKENS = 131072
-WEB_MAX_TOKENS = 1000000
+WEB_MAX_TOKENS = 1000000  # Alto intencional: delegamos gestion de contexto al servidor web
 # Umbral por defecto (80%) — a partir de aqui se activa resumen progresivo
 DEFAULT_SUMMARY_THRESHOLD = 80
 

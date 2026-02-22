@@ -32,7 +32,7 @@ ADAPTIVE_BUDGETS = {
 DELEGATE_TOKEN_BUDGET = ADAPTIVE_BUDGETS["delegation"]
 
 INTERACTIVE_TOKEN_BUDGET = {
-    "web": 80000,   # Modo web (1M tokens contexto) — generoso
+    "web": 80000,   # Modo web (128K modelo, sesion gestionada por DeepSeek) — generoso
     "api": 12000,   # Modo API (128K tokens contexto) — conservador
 }
 

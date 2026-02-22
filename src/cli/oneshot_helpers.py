@@ -68,7 +68,7 @@ def build_token_usage(
 ):
     """Construye reporte detallado de consumo de tokens.
 
-    Permite a Claude Code gestionar el budget de 1M tokens de DeepSeek Web.
+    Permite a Claude Code gestionar el budget de tokens de DeepSeek (128K contexto).
     """
     sys_tokens = estimate_tokens(system_prompt)
     skills_tokens = estimate_tokens(skills_context)

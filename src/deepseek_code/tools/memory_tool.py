@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 from ..server.tool import BaseTool
 
-# Limite de tamaño de memoria (5 MB — suficiente para sesiones largas con 1M tokens)
+# Limite de tamaño de memoria (5 MB — suficiente para sesiones largas)
 MAX_MEMORY_BYTES = 5 * 1024 * 1024
 # Maximo de resumenes automaticos antes de compactar
 MAX_AUTO_SUMMARIES = 20

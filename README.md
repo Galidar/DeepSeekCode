@@ -2,13 +2,13 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:4F46E5,50:7C3AED,100:E87E04&height=230&section=header&text=DeepSeek%20Code&fontSize=70&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=The%20AI-to-AI%20Collaboration%20Revolution&descSize=20&descAlignY=55&descAlign=50" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+One+Million+Tokens.+Zero+Wasted+Context.;Save+78%25+of+Claude's+tokens+on+every+task.;Free+code+generation+with+self-learning+memory.)](https://github.com/Galidar/DeepSeekCode)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=22&duration=3000&pause=1000&color=4F46E5&center=true&vCenter=true&repeat=true&width=750&height=45&lines=Two+AIs.+128K+%2B+200K+Tokens.+Zero+Wasted+Context.;Delegate+heavy+code+to+DeepSeek+for+free.;Free+code+generation+with+self-learning+memory.)](https://github.com/Galidar/DeepSeekCode)
 
 <br><br>
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 &nbsp;
-![DeepSeek](https://img.shields.io/badge/DeepSeek-1M_Context-4F46E5?style=for-the-badge)
+![DeepSeek](https://img.shields.io/badge/DeepSeek-128K_Context-4F46E5?style=for-the-badge)
 &nbsp;
 ![Claude](https://img.shields.io/badge/Claude_Code-Plugin-E87E04?style=for-the-badge)
 &nbsp;
@@ -18,7 +18,7 @@
 &nbsp;
 ![i18n](https://img.shields.io/badge/i18n-EN_|_ES_|_JA-00B894?style=for-the-badge&logo=googletranslate&logoColor=white)
 &nbsp;
-![License](https://img.shields.io/badge/License-MIT-374151?style=for-the-badge)
+![License](https://img.shields.io/badge/License-AGPL--3.0-374151?style=for-the-badge)
 
 </div>
 
@@ -28,9 +28,9 @@
 
 Most AI coding tools are **text chat in a box** — they can't touch your files, can't run commands, and forget everything after each session. Claude Code is powerful but burns through its 200K token context in 1-2 heavy tasks.
 
-DeepSeek Code changes that equation entirely. It's a **complete AI coding system** with its own file tools, shell access, knowledge base, and persistent memory — powered by DeepSeek's **1 million token** context window. Use it standalone from the terminal, or plug it into Claude Code so Claude can delegate the heavy work while keeping 70-85% of its own tokens free.
+DeepSeek Code changes that equation entirely. It's a **complete AI coding system** with its own file tools, shell access, knowledge base, and persistent memory — powered by DeepSeek's **128K token** context window (V3.2). Use it standalone from the terminal, or plug it into Claude Code so Claude can delegate the heavy code generation while keeping its own tokens free.
 
-The result? Instead of 1-2 tasks per session, you get **5-8 tasks** — and DeepSeek's generation is **free** with a web account.
+The result? Claude orchestrates in ~5-15K tokens per task while DeepSeek does all the heavy lifting — and DeepSeek's generation is **free** with a web account.
 
 <br>
 
@@ -44,14 +44,14 @@ graph TB
     CC -->|"delegates"| SM["🧬 Surgical Memory — project rules"]
     CC -->|"delegates"| GM["🌐 Global Memory — your code style"]
 
-    SK --> DS["⚡ DeepSeek Code — 1M tokens, FREE"]
+    SK --> DS["⚡ DeepSeek Code — 128K tokens, FREE"]
     SM --> DS
     GM --> DS
 
     DS --> TOOLS["🔧 14 MCP Tools — read, write, edit, run"]
     DS --> VAL["✅ Validates — truncation, TODOs, style"]
 
-    VAL -->|"pass"| RESULT["🏁 23K tokens used — 5-8 tasks remaining"]
+    VAL -->|"pass"| RESULT["🏁 Code generated FREE — Claude tokens saved"]
     VAL -.->|"fail → retry"| DS
     VAL -.->|"learn error"| SM
 
@@ -93,19 +93,18 @@ Every delegation returns a precise token report so you always know where the bud
     "surgical_briefing": 1200,
     "global_briefing": 500,
     "total_input": 46950,
-    "context_remaining": 944550,
-    "context_used_percent": "5.5%"
+    "context_remaining": 81050,
+    "context_used_percent": "36.7%"
   }
 }
 ```
 
-94.5% of DeepSeek's 1M context still available after a typical delegation.
+63% of DeepSeek's 128K context still available after a typical delegation. Claude only spent ~5-15K of its own 200K to orchestrate.
 
 | | Claude Alone | Claude + DeepSeek Code |
 |:--|:-----------:|:---------------------:|
-| **Tokens burned per task** | 120K - 180K | 15K - 50K |
-| **Tasks per 200K session** | 1 - 2 | **5 - 8** |
-| **Total context available** | 200K | **1.2 million** |
+| **Claude tokens per task** | 120K - 180K | **5K - 15K** (orchestration only) |
+| **Code generation context** | 200K (shared with everything) | **128K dedicated** (DeepSeek) |
 | **Code generation cost** | Your Claude tokens | **Free** (DeepSeek web) |
 | **Remembers past mistakes** | No | **Yes** — dual memory |
 | **Validates its own output** | No | **Yes** — auto-retry on errors |
@@ -130,11 +129,11 @@ DeepSeek Code isn't a simple proxy to an API. It's a full coding environment wit
 graph TB
     User(["👤 You — describe your task"])
 
-    User -->|"python run.py"| DS["⚡ DeepSeek Code<br/>1M tokens · FREE · standalone"]
+    User -->|"python run.py"| DS["⚡ DeepSeek Code<br/>128K tokens · FREE · standalone"]
     User -->|"via Claude Code plugin"| CC["🧠 Claude Code<br/>200K tokens · orchestrates"]
 
     CC -->|"/delegate — single task"| DEL["📋 Oneshot<br/>auto-validates, retries ×3"]
-    CC -->|"/quantum — N parallel"| QB["⚡ Quantum Bridge<br/>2-10 sessions, 3-way merge"]
+    CC -->|"/quantum — dual parallel"| QB["⚡ Quantum Bridge<br/>2 sessions, 3-way merge"]
     CC -->|"/multi-step — complex plans"| MS["📊 Multi-Step<br/>sequential + parallel groups"]
     CC -->|"/converse — iterative"| CV["💬 Conversational<br/>shared thinking, multi-turn"]
 
@@ -295,7 +294,7 @@ python run.py --delegate "implement inventory system" --template inventory.ts --
 
 <br>
 
-**⚡ Quantum Bridge** — The most powerful mode. Up to 10 DeepSeek sessions attack the same task from different angles simultaneously (e.g., "backend logic" and "frontend render"). Auto-selects `deepseek-reasoner` for complex tasks (64K output + chain-of-thought). Results are auto-merged using a 3-strategy cascade: TODO-block matching → function extraction → raw concatenation. Large templates are automatically chunked to prevent hallucination.
+**⚡ Quantum Bridge** — The most powerful mode. 2 DeepSeek sessions attack the same task from different angles simultaneously (e.g., "backend logic" and "frontend render"). Auto-selects `deepseek-reasoner` for complex tasks (64K output including chain-of-thought). Results are auto-merged using a 3-strategy cascade: TODO-block matching → function extraction → raw concatenation. Large templates are automatically chunked to prevent hallucination.
 ```bash
 python run.py --quantum "create combat system" --quantum-angles "logic,render" --json
 ```
@@ -352,7 +351,7 @@ DeepSeek Code now adapts to the difficulty of each task automatically:
 | **Auto Model Select** | Simple questions use `deepseek-chat` (8K output). Complex code uses `deepseek-reasoner` (64K output + chain-of-thought) — selected automatically |
 | **Thinking Mode** | Web sessions can enable DeepSeek's thinking mode for deeper reasoning on code tasks |
 | **Smart Chunking** | Templates over 30K tokens are split by TODO blocks to prevent hallucination. Each chunk gets context from the previous one |
-| **Scalable Pool** | Quantum Bridge scales from 2 to 10 parallel sessions (configurable via `pool_size`) |
+| **Dual Sessions** | Quantum Bridge runs 2 parallel sessions with different angles. Pool infrastructure (`create_pool_clients`) available for future scaling |
 | **Adaptive max_tokens** | Output budget scales with task complexity: 1K for chat, 4K for simple code, 16K for delegations |
 
 All features are backward-compatible — old configs work identically without changes.
@@ -391,7 +390,7 @@ Two authentication modes:
 
 **🔍 Serena** — Symbolic code navigation with two modes: external `serena-agent` (LSP-powered) or a built-in regex engine that extracts classes, functions, and methods across Python, JavaScript, TypeScript, Java, Go, and Rust.
 
-**🌐 i18n** — 151 translation keys across English (full), Spanish (full), and Japanese (36 keys + automatic English fallback). Language selector on first run, switchable anytime with `/lang`.
+**🌐 i18n** — 155 translation keys across English (full), Spanish (full), and Japanese (36 keys + automatic English fallback). Language selector on first run, switchable anytime with `/lang`.
 
 **🖥️ 12 CLI commands** — `/agent`, `/skill`, `/skills`, `/serena`, `/login`, `/logout`, `/health`, `/account`, `/keys`, `/test`, `/lang`, `/exit`
 
@@ -434,7 +433,7 @@ The plugin includes an 850+ line knowledge base so Claude knows exactly how to o
 
 <div align="center">
 
-**DeepSeek Code** — Two AIs, one million tokens, zero wasted context.
+**DeepSeek Code** — Two AIs, free code generation, zero wasted context.
 
 Built with 🧠 Claude Code + ⚡ DeepSeek + 🔧 MCP Protocol
 

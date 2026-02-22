@@ -1,7 +1,7 @@
 {
   "name": "deepseek-code",
   "version": "2.1.0",
-  "description": "Complete multi-agent system for DeepSeek Code. V3.2: auto-select model (deepseek-reasoner for complex code), thinking mode, smart template chunking, scalable pool (2-10 instances), adaptive max_tokens. Plus: oneshot delegation, quantum parallel, multi-session, conversational dialogue, surgical memory, global memory, adaptive prompts, and 3-phase collaboration protocol. Claude Code orchestrates DeepSeek as a 1M-token code generation engine.",
+  "description": "Complete multi-agent system for DeepSeek Code. V3.2: auto-select model (deepseek-reasoner for complex code), thinking mode, smart template chunking, scalable pool (2-10 instances), adaptive max_tokens. Plus: oneshot delegation, quantum parallel, multi-session, conversational dialogue, surgical memory, global memory, adaptive prompts, and 3-phase collaboration protocol. Claude Code orchestrates DeepSeek as a 128K-token code generation engine with free web mode.",
   "author": {
     "name": "Galidar"
   },
