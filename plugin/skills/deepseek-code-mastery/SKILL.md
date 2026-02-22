@@ -186,8 +186,8 @@ python run.py --delegate "TAREA" [opciones] --json
     "total_input": 46950,
     "response_estimated": 8500,
     "total_estimated": 55450,
-    "context_remaining": 81050,
-    "context_used_percent": "36.7%"
+    "context_remaining": 953050,
+    "context_used_percent": "4.7%"
   }
 }
 ```
@@ -1077,8 +1077,8 @@ Template (si existe)         variable            len(template) / 3.5
 Context file (si existe)     variable            len(context) / 3.5
 User prompt                  ~100-500            len(task) / 3.5
 ─────────────────────────────────────────────────────────
-TOTAL SISTEMA:              ~20,000-92,000       (16-72% del contexto)
-DISPONIBLE RESPUESTA:       ~36,000-108,000      (28-84% del contexto)
+TOTAL SISTEMA:              ~20,000-92,000       (2-9% del contexto de 1M)
+DISPONIBLE RESPUESTA:       ~908,000-980,000     (91-98% del contexto de 1M)
 ```
 
 ### JSON de Respuesta con token_usage
@@ -1100,8 +1100,8 @@ El JSON de delegacion incluye un campo `token_usage` con el desglose:
     "total_input": 46950,
     "response_estimated": 8500,
     "total_estimated": 55450,
-    "context_remaining": 81050,
-    "context_used_percent": "36.7%"
+    "context_remaining": 953050,
+    "context_used_percent": "4.7%"
   }
 }
 ```

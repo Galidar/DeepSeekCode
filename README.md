@@ -102,8 +102,8 @@ Every delegation returns a precise token report so you always know where the bud
     "surgical_briefing": 1200,
     "global_briefing": 500,
     "total_input": 46950,
-    "context_remaining": 81050,
-    "context_used_percent": "36.7%"
+    "context_remaining": 953050,
+    "context_used_percent": "4.7%"
   }
 }
 ```
