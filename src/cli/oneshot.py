@@ -29,6 +29,7 @@ def run_oneshot(query: str, json_mode: bool = False, config_path: str = None):
             handle_no_credentials(json_mode, originals)
 
         app = create_app(config)
+        app.client.default_session_name = "oneshot"
 
         # SurgicalMemory + GlobalMemory: inyectar y aprender (standalone)
         from deepseek_code.surgical.integration import pre_delegation, post_delegation
@@ -176,6 +177,8 @@ def run_delegate_oneshot(
     validate: bool = True,
     project_context_path: str = None,
     negotiate_skills: bool = False,
+    session_name: str = None,
+    transfer_from: str = None,
 ):
     """Delegacion con validacion, retry y auto-continuacion por truncamiento."""
     originals = None
@@ -193,11 +196,7 @@ def run_delegate_oneshot(
 
         from deepseek_code.agent.prompts import build_delegate_prompt
         from deepseek_code.client.prompt_builder import assemble_delegate_prompt
-        from deepseek_code.skills.skill_injector import build_delegate_skills_context
         from cli.delegate_validator import validate_delegate_response, estimate_template_tokens
-        from cli.collaboration import (
-            run_collaborative_delegation, build_project_context,
-        )
 
         # Estimar tokens del template y advertir si es grande
         template_analysis = None
@@ -231,56 +230,81 @@ def run_delegate_oneshot(
             is_multi_file=is_multi_file,
         )
 
-        # Skills adaptivas (sin Core Skills ciegos)
+        # --- v2.6: Orchestrator-based token-efficient injection ---
+        # Skills, surgical memory, global memory are now injected as separate
+        # Phase 2 messages (tracked per-session), not embedded in system prompt.
+        from deepseek_code.sessions.session_orchestrator import SessionOrchestrator
+        from deepseek_code.sessions.session_namespace import slugify
+        from deepseek_code.client.session_chat import get_session_store
+        from deepseek_code.surgical.integration import post_delegation
+        from deepseek_code.global_memory.global_integration import (
+            global_post_delegation, get_injected_skill_names, detect_project_name,
+        )
+
         skills_dir = config.get("skills_dir", SKILLS_DIR)
         task_text = task + (" " + template[:500] if template else "")
-        # SurgicalMemory: inyectar contexto del proyecto
-        from deepseek_code.surgical.integration import pre_delegation, post_delegation
-        surgical_briefing, surgical_store = pre_delegation(
-            APPDATA_DIR, task,
-            template_path=template_path, context_path=context_path,
+
+        orchestrator = SessionOrchestrator(
+            get_session_store(), skills_dir=skills_dir, appdata_dir=APPDATA_DIR,
+        )
+
+        # Sesiones por defecto: continuidad automatica entre invocaciones CLI
+        session_id = session_name or "default"
+
+        call_params = orchestrator.prepare_session_call(
+            mode="delegate",
+            identifier=session_id,
+            user_message=task,  # placeholder, real message built below
+            base_system_prompt=base_system,
+            task_text=task_text,
+            template_path=template_path,
+            context_path=context_path,
             project_context_path=project_context_path,
         )
-        # GlobalMemory: inyectar perfil personal cross-proyecto
-        from deepseek_code.global_memory.global_integration import (
-            global_pre_delegation, global_post_delegation,
-            get_injected_skill_names, detect_project_name,
-        )
-        global_briefing, global_store = global_pre_delegation(APPDATA_DIR, task)
 
-        # Skills: negociadas (DeepSeek elige) o heuristicas (keyword matching)
-        has_errors = bool(surgical_store and surgical_store.data.get("error_log"))
-        if negotiate_skills:
-            from deepseek_code.skills.skill_negotiation import negotiate_or_fallback
-            skills_extra, was_negotiated = asyncio.run(
-                negotiate_or_fallback(
-                    app.client, task_text, skills_dir,
-                    task_level="delegation",
-                    enable_negotiation=True,
-                    has_recurring_errors=has_errors,
+        # Knowledge transfer: inject knowledge from another session
+        if transfer_from:
+            from deepseek_code.sessions.knowledge_transfer import transfer_knowledge
+            actual_session = call_params["session_name"]
+            kt_injection = transfer_knowledge(
+                get_session_store(), transfer_from, actual_session,
+            )
+            if kt_injection:
+                call_params["pending_injections"].append(kt_injection)
+                print(
+                    f"  [delegate] Conocimiento transferido desde '{transfer_from}'",
+                    file=sys.stderr,
                 )
-            )
-        else:
-            skills_extra = build_delegate_skills_context(
-                skills_dir, task_text,
-                task_level="delegation", has_recurring_errors=has_errors,
-            )
-        enriched_system = base_system + skills_extra + surgical_briefing + global_briefing
+            else:
+                print(
+                    f"  [delegate] WARN: No se encontro sesion '{transfer_from}' para transferir",
+                    file=sys.stderr,
+                )
 
-        # Construir contexto de proyecto para briefing
-        project_ctx = build_project_context(surgical_store)
+        # Extract stores for post-delegation learning
+        surgical_store = call_params.get("surgical_store")
+        global_store = call_params.get("global_store")
 
-        # Delegacion colaborativa (briefing + ejecucion + review)
-        response, total_continuations, validation = asyncio.run(
-            run_collaborative_delegation(
-                app, task, enriched_system,
-                template=template, context=context, feedback=feedback,
-                project_context=project_ctx,
-                enable_briefing=bool(project_ctx and template),
-                enable_review=validate and template is not None,
-                max_review_rounds=max_retries,
+        total_continuations = 0
+        validation = None
+
+        # === MODO SESION: chat con continuidad persistente ===
+        user_prompt = build_delegate_prompt(
+            task, template=template, context=context, feedback=feedback,
+        )
+        actual_session = call_params["session_name"]
+        print(f"  [delegate] Sesion '{actual_session}' "
+              f"(inyecciones: {len(call_params['pending_injections'])})", file=sys.stderr)
+
+        response = asyncio.run(
+            app.client.chat_in_session(
+                actual_session, user_prompt,
+                call_params["system_prompt"],  # None if already sent
+                pending_injections=call_params["pending_injections"],
             )
         )
+        from cli.oneshot_helpers import strip_markdown_fences
+        response = strip_markdown_fences(response)
 
         duration = time.time() - start_time
 
@@ -342,17 +366,18 @@ def run_delegate_oneshot(
                     "estimated_tokens": template_analysis["estimated_tokens"],
                     "recommended_split": template_analysis["recommended_split"],
                 }
-            # Token usage report para gestion estrategica del budget de 1M
+            # Token usage report — injections tracked per-session now
             result["token_usage"] = build_token_usage(
                 system_prompt=base_system,
-                skills_context=skills_extra,
-                surgical_briefing=surgical_briefing,
+                skills_context="",  # Now injected as Phase 2
+                surgical_briefing="",  # Now injected as Phase 2
                 user_prompt=task,
                 template=template,
                 context=context,
                 response=response,
-                global_briefing=global_briefing,
+                global_briefing="",  # Now injected as Phase 2
             )
+            result["session_injections"] = len(call_params["pending_injections"])
             output_json(result)
         else:
             output_text(response)

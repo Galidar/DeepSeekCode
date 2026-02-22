@@ -9,10 +9,6 @@ from openai import AsyncOpenAI
 
 from ..server.protocol import MCPServer, MCPRequest, MCPMethod
 from .web_session import DeepSeekWebSession, TokenExpiredError
-from .web_tool_caller import (
-    build_tools_prompt, build_web_prompt, extract_tool_calls,
-    format_tool_result, clean_final_response
-)
 from .context_manager import (
     estimate_tokens, total_estimated_tokens, build_summary_prompt,
     should_summarize, rebuild_history_after_summary, make_memory_entry,
@@ -82,6 +78,7 @@ class DeepSeekCodeClient:
             {"role": "system", "content": self.system_message}
         ]
         self.available_tools = None
+        self.default_session_name = "default"
         self.summary_count = 0
         # Maximo de resumenes: proporcional al contexto disponible
         # Web (1M) = 10 resumenes, API (128K) = 3
@@ -233,8 +230,9 @@ class DeepSeekCodeClient:
         if resumen_hecho and notificacion:
             print(f"\n  {notificacion}\n")
 
-        # Auto-inyectar skills relevantes en el system message
-        if self.skills_dir:
+        # API mode: embed skills in system prompt (traditional approach)
+        # Web mode: skills are injected as separate messages in _chat_web()
+        if self.mode == "api" and self.skills_dir:
             updated_sys = self._build_system_message(user_message=user_message)
             if updated_sys != self.system_message:
                 self.system_message = updated_sys
@@ -253,6 +251,45 @@ class DeepSeekCodeClient:
             return await self._chat_with_system_api(user_message, system_prompt, max_steps)
         else:
             return await self._chat_with_system_web(user_message, system_prompt, max_steps)
+
+    async def chat_in_session(self, session_name: str, user_message: str,
+                               system_prompt: str = None, max_steps: int = 10,
+                               pending_injections: list = None) -> str:
+        """Chat con continuidad de sesion persistente (multi-sesion).
+
+        Flow per message:
+        1. System prompt + tools → "OK" (first message only)
+        2. Context injections → confirmation (only new ones)
+        3. User message (clean text)
+
+        Args:
+            session_name: Nombre de la sesion (ej: "auth-module", "chat-1")
+            user_message: Mensaje del usuario
+            system_prompt: System prompt (solo se envia en el primer mensaje)
+            max_steps: Maximo de iteraciones de tool-calling
+            pending_injections: Contextos a inyectar antes del mensaje
+        """
+        if self.mode == "api":
+            return await self.chat_with_system(
+                user_message, system_prompt or self.system_message, max_steps
+            )
+
+        from .session_chat import chat_in_session
+        tools = await self._get_tools()
+        use_thinking = self.config.get("thinking_enabled", True)
+
+        return await chat_in_session(
+            web_session=self.web_session,
+            mcp_server=self.mcp,
+            session_name=session_name,
+            user_message=user_message,
+            system_prompt=system_prompt or self.system_message,
+            tools=tools,
+            max_steps=max_steps,
+            thinking_enabled=use_thinking,
+            session_manager=self.session_manager,
+            pending_injections=pending_injections,
+        )
 
     async def _run_tool(self, tool_call_id, tool_name, arguments):
         """Ejecuta una herramienta MCP y retorna el resultado como string."""
@@ -333,69 +370,68 @@ class DeepSeekCodeClient:
         return "Se alcanzo el numero maximo de iteraciones sin respuesta final."
 
     async def _chat_web(self, max_steps: int) -> str:
-        """Modo sesion web con tool calling simulado por texto."""
-        import asyncio
+        """Modo sesion web con continuidad persistente.
 
-        # Verificar sesion antes de cada operacion web
-        if self.session_manager:
-            valid = await self.session_manager.ensure_valid_session()
-            if not valid:
-                return "Sesion expirada. Ejecuta /login para renovar."
+        Flow per message:
+        1. System prompt + tools → "OK" (first message only)
+        2. Skills/memory/etc → "Skill X aceptada" (only new ones)
+        3. User message (clean text only)
+        """
+        user_message = self.conversation_history[-1]["content"]
 
-        # Construir prompt de herramientas (una sola vez)
-        tools = await self._get_tools()
-        tools_prompt = build_tools_prompt(tools) if tools else ""
+        # Detect skills to inject as separate messages
+        pending_injections = self._detect_pending_injections(user_message)
 
-        for step in range(max_steps):
-            # Construir prompt completo con system + historial + herramientas
-            prompt = build_web_prompt(
-                self.system_message,
-                self.conversation_history,
-                tools_prompt
-            )
+        response = await self.chat_in_session(
+            session_name=self.default_session_name,
+            user_message=user_message,
+            system_prompt=self.system_message,
+            max_steps=max_steps,
+            pending_injections=pending_injections,
+        )
 
-            # Enviar al modo web (con thinking_enabled configurable)
-            use_thinking = self.config.get("thinking_enabled", True)
-            try:
-                response = await asyncio.get_event_loop().run_in_executor(
-                    None, self.web_session.chat, prompt, use_thinking
-                )
-            except TokenExpiredError as e:
-                return f"[Error de sesion] {e}. Ejecuta /login para renovar."
+        self.conversation_history.append({"role": "assistant", "content": response})
+        return response
 
-            # Extraer tool calls de la respuesta
-            tool_calls, clean_text = extract_tool_calls(response)
+    def _detect_pending_injections(self, user_message: str) -> list:
+        """Detect skills/context that need to be injected into the session.
 
-            if not tool_calls:
-                # Sin tool calls: respuesta final — limpiar JSON crudo si hay
-                cleaned = clean_final_response(response) if step > 0 else response
-                self.conversation_history.append({"role": "assistant", "content": cleaned})
-                return cleaned
+        Only injects for code-level tasks (not casual chat).
+        Returns list of {"type", "name", "content"} dicts for new contexts.
+        Already-injected contexts are skipped (tracked per session).
+        """
+        injections = []
+        if not self.skills_dir:
+            return injections
 
-            # Ejecutar cada herramienta y agregar resultados al historial
-            if clean_text:
-                self.conversation_history.append({"role": "assistant", "content": clean_text})
+        # Only inject skills for code-level tasks, not casual conversation
+        task_level = classify_task(user_message)
+        if task_level.value < TaskLevel.CODE_SIMPLE.value:
+            return injections
 
-            for call in tool_calls:
-                tool_name = call["tool"]
-                arguments = call["args"]
+        from ..skills.skill_injector import detect_relevant_skills, load_skill_contents
+        from .session_chat import get_session_store
 
-                tool_request = MCPRequest(
-                    id=f"web_{step}_{tool_name}",
-                    method=MCPMethod.TOOLS_CALL,
-                    params={"name": tool_name, "arguments": arguments}
-                )
-                tool_response = await self.mcp.handle_request(tool_request)
+        relevant = detect_relevant_skills(user_message, max_skills=5)
+        if not relevant:
+            return injections
 
-                if hasattr(tool_response, 'error'):
-                    result_str = f"Error: {tool_response.error.message}"
-                else:
-                    result = tool_response.result
-                    result_str = json.dumps(result, ensure_ascii=False) if isinstance(result, dict) else str(result)
+        loaded = load_skill_contents(self.skills_dir, relevant)
+        if not loaded:
+            return injections
 
-                # Agregar resultado al historial para el siguiente turno
-                formatted = format_tool_result(tool_name, result_str)
-                self.conversation_history.append({"role": "tool_result", "content": formatted})
-                print(f"  [herramienta] {tool_name} -> {len(result_str)} chars")
+        # Check which are already injected in the current session
+        store = get_session_store()
+        session = store.get(self.default_session_name)
+        already = set(session.injected_contexts) if session else set()
 
-        return "Se alcanzo el numero maximo de iteraciones en modo web."
+        for name, content, tokens in loaded:
+            ctx_id = f"skill:{name}"
+            if ctx_id not in already:
+                injections.append({
+                    "type": "skill",
+                    "name": name,
+                    "content": content,
+                })
+
+        return injections

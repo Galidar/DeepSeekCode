@@ -17,8 +17,10 @@ from cli.config_loader import VERSION
 from cli.i18n import t
 
 
-def get_prompt_string() -> str:
-    """Retorna el string del prompt interactivo."""
+def get_prompt_string(chat_name: str = None) -> str:
+    """Retorna el string del prompt interactivo, opcionalmente con nombre de chat."""
+    if chat_name:
+        return f"[dim]{chat_name}[/dim] [bold cyan]>[/bold cyan]"
     return "[bold cyan]>[/bold cyan]"
 
 
@@ -88,6 +90,11 @@ def render_welcome_banner(console: Console, mode_label: str, ctx_label: str,
     cmd_table.add_row("  /agent <meta>", t("cmd_agent"))
     cmd_table.add_row("  /skill <nombre>", t("cmd_skill"))
     cmd_table.add_row("  /skills", t("cmd_skills"))
+    cmd_table.add_row("  /new [nombre]", "New chat")
+    cmd_table.add_row("  /chats", "List chats")
+    cmd_table.add_row("  /switch <nombre>", "Switch chat")
+    cmd_table.add_row("  /close [nombre]", "Close chat")
+    cmd_table.add_row("  /chat", "Current chat info")
     cmd_table.add_row("  /serena", t("cmd_serena"))
     cmd_table.add_row("  /login", t("cmd_login"))
     cmd_table.add_row("  /logout", t("cmd_logout"))

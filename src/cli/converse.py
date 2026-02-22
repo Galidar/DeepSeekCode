@@ -44,6 +44,8 @@ def run_converse(
     json_mode=False,
     config_path=None,
     project_context_path=None,
+    session_name=None,
+    transfer_from=None,
 ):
     """Ejecuta conversacion multi-turno con DeepSeek.
 
@@ -64,7 +66,8 @@ def run_converse(
     try:
         _run_converse_inner(
             initial_message, converse_file, json_mode,
-            config_path, project_context_path, originals,
+            config_path, project_context_path, originals, session_name,
+            transfer_from,
         )
     except Exception as e:
         if json_mode:
@@ -82,9 +85,13 @@ def run_converse(
 
 def _run_converse_inner(
     initial_message, converse_file, json_mode,
-    config_path, project_context_path, originals,
+    config_path, project_context_path, originals, session_name=None,
+    transfer_from=None,
 ):
     """Logica interna del modo conversacional."""
+    # Sesiones por defecto: continuidad automatica entre invocaciones CLI
+    session_name = session_name or "default"
+
     config = load_config(config_path)
     if not check_credentials(config):
         handle_no_credentials(json_mode, originals, mode="converse")
@@ -119,40 +126,57 @@ def _run_converse_inner(
         else:
             system_prompt = build_adaptive_system_prompt(task_level, first_msg)
 
-    # SurgicalMemory + GlobalMemory
-    from deepseek_code.surgical.integration import pre_delegation, post_delegation
+    # --- v2.6: Orchestrator-based token-efficient injection ---
+    from deepseek_code.sessions.session_orchestrator import SessionOrchestrator
+    from deepseek_code.client.session_chat import get_session_store
+    from deepseek_code.surgical.integration import post_delegation
     from deepseek_code.global_memory.global_integration import (
-        global_pre_delegation, global_post_delegation,
-        get_injected_skill_names, detect_project_name,
+        global_post_delegation, get_injected_skill_names, detect_project_name,
     )
-    from deepseek_code.skills.skill_injector import build_delegate_skills_context
 
     task_summary = " ".join(messages[:2])[:500]
     skills_dir = config.get("skills_dir", SKILLS_DIR)
 
-    # Solo inyectar skills si el nivel lo amerita
-    level_name = task_level.name.lower()
-    skills_extra = ""
-    if task_level.value >= TaskLevel.CODE_SIMPLE.value:
-        skills_extra = build_delegate_skills_context(
-            skills_dir, task_summary, task_level=level_name,
-        )
+    orchestrator = SessionOrchestrator(
+        get_session_store(), skills_dir=skills_dir, appdata_dir=APPDATA_DIR,
+    )
 
-    surgical_briefing, surgical_store = pre_delegation(
-        APPDATA_DIR, task_summary,
+    call_params = orchestrator.prepare_session_call(
+        mode="converse",
+        identifier=session_name,
+        user_message=messages[0],
+        base_system_prompt=system_prompt,
+        task_text=task_summary,
         project_context_path=project_context_path,
     )
-    global_briefing, global_store = global_pre_delegation(
-        APPDATA_DIR, task_summary,
+
+    actual_session = call_params["session_name"]
+    surgical_store = call_params.get("surgical_store")
+    global_store = call_params.get("global_store")
+
+    # Knowledge transfer: inject knowledge from another session
+    if transfer_from:
+        from deepseek_code.sessions.knowledge_transfer import transfer_knowledge
+        kt_injection = transfer_knowledge(
+            get_session_store(), transfer_from, actual_session,
+        )
+        if kt_injection:
+            call_params["pending_injections"].append(kt_injection)
+            print(
+                f"[converse] Conocimiento transferido desde '{transfer_from}'",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"[converse] WARN: No se encontro sesion '{transfer_from}' para transferir",
+                file=sys.stderr,
+            )
+
+    print(
+        f"[converse] Sesion '{actual_session}' "
+        f"(inyecciones: {len(call_params['pending_injections'])})",
+        file=sys.stderr,
     )
-
-    enriched_system = system_prompt + skills_extra + surgical_briefing + global_briefing
-
-    # Configurar el client con el system prompt enriquecido
-    app.client.system_message = enriched_system
-    app.client.conversation_history = [
-        {"role": "system", "content": enriched_system}
-    ]
 
     # Ejecutar conversacion multi-turno
     start_time = time.time()
@@ -165,7 +189,21 @@ def _run_converse_inner(
             file=sys.stderr,
         )
 
-        response = asyncio.run(_converse_turn(app, msg))
+        # First turn: pass system prompt + injections. Subsequent: just message.
+        if i == 0:
+            response = asyncio.run(
+                app.client.chat_in_session(
+                    actual_session, msg,
+                    call_params["system_prompt"],
+                    pending_injections=call_params["pending_injections"],
+                )
+            )
+        else:
+            response = asyncio.run(
+                app.client.chat_in_session(actual_session, msg)
+            )
+        from cli.oneshot_helpers import strip_markdown_fences
+        response = strip_markdown_fences(response)
         turn_duration = time.time() - turn_start
 
         turns.append({
@@ -210,28 +248,17 @@ def _run_converse_inner(
             "turns": turns,
             "total_turns": len(turns),
             "duration_s": round(total_duration, 1),
+            "session_name": actual_session,
+            "session_injections": len(call_params["pending_injections"]),
             "token_usage": {
-                "system_prompt": _estimate_tokens(enriched_system),
+                "system_prompt": _estimate_tokens(system_prompt or ""),
                 "total_input": total_input_tokens,
                 "total_output": total_output_tokens,
-                "total_estimated": (
-                    _estimate_tokens(enriched_system)
-                    + total_input_tokens + total_output_tokens
-                ),
             },
         })
     else:
         output_text(last_response)
 
-
-async def _converse_turn(app, message):
-    """Ejecuta un turno de conversacion (mantiene historial).
-
-    Limpia markdown residual de la respuesta de DeepSeek.
-    """
-    from cli.oneshot_helpers import strip_markdown_fences
-    response = await app.client.chat(message)
-    return strip_markdown_fences(response)
 
 
 def _parse_converse_input(initial_message, converse_file):

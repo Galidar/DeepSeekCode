@@ -186,8 +186,15 @@ class DeepSeekWebSession:
             raise SessionDeadError(f"Error creando sesion de chat: {data}")
         return data["data"]["biz_data"]["id"]
 
-    def send_message(self, message: str, pow_header: str, chat_session_id: str = None, thinking_enabled: bool = False) -> Generator[str, None, None]:
-        """Envia un mensaje con la cabecera PoW. Retorna generador de tokens (streaming SSE)."""
+    def send_message(self, message: str, pow_header: str, chat_session_id: str = None,
+                     thinking_enabled: bool = False,
+                     parent_message_id=None) -> Generator[str, None, None]:
+        """Envia un mensaje con la cabecera PoW. Retorna generador de tokens (streaming SSE).
+
+        Args:
+            parent_message_id: ID del mensaje padre para continuidad de conversacion.
+                Si es None, DeepSeek usa el ultimo mensaje de la sesion.
+        """
         if not chat_session_id:
             chat_session_id = self.create_chat_session()
 
@@ -195,12 +202,14 @@ class DeepSeekWebSession:
         headers = {**self.session.headers, **self.extra_headers, "x-ds-pow-response": pow_header}
         payload = {
             "chat_session_id": chat_session_id,
-            "parent_message_id": None,
+            "parent_message_id": parent_message_id,
             "prompt": message,
             "ref_file_ids": [],
             "thinking_enabled": thinking_enabled,
             "search_enabled": True,
         }
+
+        self._last_message_id = None
 
         with self.session.post(url, headers=headers, json=payload, stream=True) as resp:
             if resp.status_code == 401:
@@ -209,6 +218,10 @@ class DeepSeekWebSession:
                 raise TokenExpiredError("Acceso denegado durante envio. Token invalido.")
             resp.raise_for_status()
             last_event = ""
+            # Track whether we're in thinking or content stream.
+            # DeepSeek sends p="response/thinking_content" to start thinking,
+            # then continuation chunks with p="" until p="response/content".
+            stream_mode = "init"  # "init" -> "thinking" -> "content"
             for line in resp.iter_lines():
                 if not line:
                     continue
@@ -229,23 +242,54 @@ class DeepSeekWebSession:
                     except json.JSONDecodeError:
                         continue
 
+                    # Capturar response_message_id del chunk metadata inicial
+                    # DeepSeek envia: {"request_message_id": 1, "response_message_id": 2}
+                    if "response_message_id" in chunk:
+                        self._last_message_id = chunk["response_message_id"]
+
                     if "v" not in chunk:
                         continue
 
-                    # Si tiene "p", solo aceptar response/content
-                    if "p" in chunk:
-                        if chunk["p"] != "response/content":
-                            continue
-
+                    path = chunk.get("p", "")
                     val = chunk["v"]
+
+                    # Capturar message_id del objeto response inicial
+                    # DeepSeek envia: {"v": {"response": {"message_id": 2, ...}}}
+                    if isinstance(val, dict) and "response" in val:
+                        resp_obj = val["response"]
+                        if isinstance(resp_obj, dict) and "message_id" in resp_obj:
+                            self._last_message_id = resp_obj["message_id"]
+                        continue
+
+                    # Track stream mode transitions
+                    if path == "response/thinking_content":
+                        stream_mode = "thinking"
+                        continue
+                    if path == "response/content":
+                        stream_mode = "content"
+                        # This chunk starts content — yield it
+                        if isinstance(val, str):
+                            yield val
+                        continue
+
+                    # Ignore all other non-empty paths
+                    if path:
+                        continue
+
+                    # For p="" chunks, only yield if we're in content mode
+                    if stream_mode != "content":
+                        continue
+
+                    # Extraer texto de respuesta
                     if isinstance(val, str):
                         yield val
-                    elif isinstance(val, dict) and "content" in val:
+                    elif isinstance(val, dict):
                         content = val.get("content", "")
                         if content:
                             yield content
 
-    def _chat_internal(self, message: str, thinking_enabled: bool = False) -> str:
+    def _chat_internal(self, message: str, thinking_enabled: bool = False,
+                       parent_message_id=None) -> str:
         """Logica interna de chat: challenge + solve + send."""
         challenge = self.get_challenge()
         answer = self.solve_challenge(challenge)
@@ -255,17 +299,26 @@ class DeepSeekWebSession:
             self._chat_session_id = self.create_chat_session()
 
         full_response = ""
-        for token in self.send_message(message, pow_header, self._chat_session_id, thinking_enabled):
+        for token in self.send_message(
+            message, pow_header, self._chat_session_id,
+            thinking_enabled, parent_message_id
+        ):
             full_response += token
         return full_response
 
-    def chat(self, message: str, thinking_enabled: bool = False) -> str:
+    def chat(self, message: str, thinking_enabled: bool = False,
+             parent_message_id=None) -> str:
         """Metodo de alto nivel con auto-recovery de sesion muerta."""
         try:
-            return self._chat_internal(message, thinking_enabled)
+            return self._chat_internal(message, thinking_enabled, parent_message_id)
         except (SessionDeadError, RuntimeError) as e:
             err_msg = str(e).lower()
             if "session" in err_msg or "chat_session" in err_msg:
                 self._chat_session_id = self.create_chat_session()
-                return self._chat_internal(message, thinking_enabled)
+                return self._chat_internal(message, thinking_enabled, parent_message_id)
             raise
+
+    @property
+    def last_message_id(self) -> str:
+        """ID del ultimo mensaje de respuesta (para continuidad)."""
+        return getattr(self, '_last_message_id', None)

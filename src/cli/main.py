@@ -133,6 +133,12 @@ class DeepSeekCodeApp:
                               self.client.max_summaries, APPDATA_DIR, SKILLS_DIR,
                               self.config)
 
+        # Gestion de chats: cada chat es una sesion persistente independiente
+        from cli.chat_manager import ChatManager
+        self.chat_mgr = ChatManager(self.client)
+        self.chat_mgr.init_or_resume()
+        console.print(f"  [dim]Chat:[/dim] [bold cyan]{self.chat_mgr.current}[/bold cyan]")
+
         if self.serena_manager:
             console.print(f"[cyan]{t('starting_serena')}[/cyan]")
             success, msg = await self.serena_manager.start()
@@ -141,7 +147,7 @@ class DeepSeekCodeApp:
         await self.token_monitor.start()
 
         while True:
-            user_input = Prompt.ask(get_prompt_string())
+            user_input = Prompt.ask(get_prompt_string(self.chat_mgr.current))
             if user_input.lower() == '/exit':
                 await self.token_monitor.stop()
                 console.print(f"[yellow]{t('goodbye')}[/yellow]")
@@ -194,6 +200,43 @@ class DeepSeekCodeApp:
                 _handle_lang_command(self.config)
                 continue
 
+            # --- Comandos de gestion de chats ---
+            if cmd == '/chat':
+                info = self.chat_mgr.info()
+                console.print(f"  [dim]Chat actual:[/dim] [bold cyan]{info['name']}[/bold cyan]  (mensajes: {info['messages']})")
+                continue
+            if cmd == '/chats':
+                chats = self.chat_mgr.list_all()
+                if not chats:
+                    console.print("  [dim]No hay chats activos.[/dim]")
+                else:
+                    for c in chats:
+                        marker = " [green]*[/green]" if c["current"] else ""
+                        console.print(f"  [cyan]{c['name']:<20}[/cyan] msgs: {c['messages']:<3}{marker}")
+                continue
+            if cmd.startswith('/new'):
+                name = user_input[4:].strip() or None
+                self.chat_mgr.new_chat(name)
+                console.print(f"  [green]Nuevo chat:[/green] [bold cyan]{self.chat_mgr.current}[/bold cyan]")
+                continue
+            if cmd.startswith('/switch'):
+                name = user_input[7:].strip()
+                if not name:
+                    console.print("  [yellow]Uso: /switch <nombre>[/yellow]")
+                elif self.chat_mgr.switch(name):
+                    console.print(f"  [green]Cambiado a:[/green] [bold cyan]{self.chat_mgr.current}[/bold cyan]")
+                else:
+                    console.print(f"  [red]Chat '{name}' no encontrado.[/red] Usa /chats para ver disponibles.")
+                continue
+            if cmd.startswith('/close') and not cmd.startswith('/logout'):
+                name = user_input[6:].strip() or None
+                closed = self.chat_mgr.close_chat(name)
+                if closed:
+                    console.print(f"  [yellow]Chat '{closed}' cerrado.[/yellow] Actual: [bold cyan]{self.chat_mgr.current}[/bold cyan]")
+                else:
+                    console.print("  [red]No se pudo cerrar el chat.[/red]")
+                continue
+
             await self.rate_limiter.wait_if_needed()
             try:
                 with console.status(f"[bold green]{t('thinking')}"):
@@ -204,6 +247,7 @@ class DeepSeekCodeApp:
 
     async def run_one_shot(self, query: str):
         """Modo de una sola consulta"""
+        self.client.default_session_name = "oneshot"
         try:
             response = await self.client.chat(query)
             console.print(response)
@@ -274,7 +318,39 @@ def main():
                         help="Generar reporte predictivo de salud del proyecto")
     parser.add_argument("--config", help="Ruta al archivo de configuracion")
 
+    # Session management
+    parser.add_argument("--session", help="Nombre de sesion persistente para continuidad")
+    parser.add_argument("--session-list", dest="session_list", action="store_true",
+                        help="Listar todas las sesiones activas")
+    parser.add_argument("--session-close", dest="session_close",
+                        help="Cerrar una sesion especifica por nombre")
+    parser.add_argument("--session-close-all", dest="session_close_all", action="store_true",
+                        help="Cerrar todas las sesiones activas")
+    parser.add_argument("--session-digest", dest="session_digest", action="store_true",
+                        help="Output JSON detallado de todas las sesiones para routing")
+    parser.add_argument("--transfer-from", dest="transfer_from",
+                        help="Transferir conocimiento de otra sesion (usado con --session)")
+
     args = parser.parse_args()
+
+    # Session management commands
+    if args.session_list or args.session_close or args.session_close_all:
+        from cli.session_commands import handle_session_commands
+        handle_session_commands(args)
+        return
+
+    # Session digest: JSON compacto de todas las sesiones para routing
+    if args.session_digest:
+        import json as _json
+        from deepseek_code.sessions.session_orchestrator import SessionOrchestrator
+        from deepseek_code.client.session_chat import get_session_store
+        from deepseek_code.sessions.knowledge_transfer import list_transferable_sessions
+        store = get_session_store()
+        orchestrator = SessionOrchestrator(store)
+        digest = orchestrator.get_routing_digest()
+        digest["transferable"] = list_transferable_sessions(store)
+        print(_json.dumps(digest, ensure_ascii=False, indent=2))
+        return
 
     # Intelligence: Requirements pipeline y health report
     if args.requirements:
@@ -310,6 +386,8 @@ def main():
             json_mode=args.json,
             config_path=args.config,
             project_context_path=args.project_context,
+            session_name=args.session,
+            transfer_from=args.transfer_from,
         )
         return
 
@@ -353,6 +431,8 @@ def main():
                 validate=not args.no_validate,
                 project_context_path=args.project_context,
                 negotiate_skills=args.negotiate_skills,
+                session_name=args.session,
+                transfer_from=args.transfer_from,
             )
         elif args.agent:
             run_agent_oneshot(args.agent, json_mode=args.json, config_path=args.config)
