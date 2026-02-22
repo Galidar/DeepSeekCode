@@ -193,7 +193,7 @@ async def _execute_step(
             get_session_store(), skills_dir=skills_dir, appdata_dir=appdata_dir,
         )
         call_params = orchestrator.prepare_session_call(
-            mode="multistep",
+            mode="multi-step",
             identifier=step.id,
             user_message=step.task,
             base_system_prompt=base_system,
