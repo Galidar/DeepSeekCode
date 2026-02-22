@@ -554,7 +554,7 @@ RENDIMIENTO POR MODO:
 
 ```
 Fase 1 — System prompt:
-  DELEGATE_SYSTEM_PROMPT       (~7K tokens, base via assemble_delegate_prompt())
+  DEEPSEEK_CODE_IDENTITY + DELEGATE_BASE + bloques modulares (~7K tokens, via assemble_delegate_prompt())
 
 Fase 2 — Inyecciones separadas (pending_injections):
   + skill:programming-foundations  (~15K tokens, core skills)
@@ -751,7 +751,7 @@ Detecta:
 
 ```
 Fase 1 — System prompt:
-  assemble_delegate_prompt()     (~7K tokens, base)
+  DEEPSEEK_CODE_IDENTITY + DELEGATE_BASE + bloques modulares (~7K tokens)
 
 Fase 2 — Inyecciones via SessionOrchestrator:
   + skill:core-skills            (~15K tokens, siempre inyectados)

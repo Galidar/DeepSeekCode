@@ -157,24 +157,3 @@ def is_multi_file_task(task: str) -> bool:
         "multiple files", "multiples archivos",
     }
     return any(phrase in task_lower for phrase in multi_file_words)
-
-
-def is_complex_task(task: str, template: str = None) -> bool:
-    """Determina si una tarea es compleja (amerita patrones avanzados).
-
-    Args:
-        task: Descripcion de la tarea
-        template: Template con TODOs (opcional)
-
-    Returns:
-        True si la tarea amerita bloques de patrones avanzados
-    """
-    if template and len(template) > 2000:
-        return True
-    task_lower = task.lower()
-    complex_words = {
-        "juego", "game", "sistema", "system", "arquitectura",
-        "fullstack", "pipeline", "canvas", "3d", "multiplayer",
-        "engine", "framework", "completo", "full",
-    }
-    return any(word in task_lower for word in complex_words)
