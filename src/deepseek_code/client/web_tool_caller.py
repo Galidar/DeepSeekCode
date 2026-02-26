@@ -327,15 +327,68 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
     let_max_empty_retries = 2
     let_error_tracker = {}  # {error_pattern_normalizado: count}
     let_max_repeat_errors = 3
+    let_last_successful_tools = []  # [(tool_name, result_summary), ...]
+    let_stall_nudge_count = 0  # Nudges enviados tras stall en reads
+    let_max_stall_nudges = 2   # Max nudges antes de rendirse
+    let_max_tools_per_iter = 5  # Limitar tools por iteracion
 
     for step in range(max_steps):
         try:
+            # max_stall_retries=0: NO crear sesiones nuevas en stalls.
+            # La logica de recovery la manejamos aqui con nudges inteligentes.
             response = await asyncio.get_event_loop().run_in_executor(
-                None, web_session.chat, prompt, True, let_parent_id,
+                None, web_session.chat, prompt, True, let_parent_id, 0,
             )
         except TokenExpiredError as e:
             return f"[Error de sesion] {e}. Ejecuta /login para renovar."
         except StallDetectedError as e:
+            # --- Stall recovery inteligente con nudges ---
+            # Preservar parent_id del response stalled (DeepSeek asigno msg_id
+            # aunque el contenido quedo vacio — el contexto sigue en la sesion)
+            if web_session.last_message_id:
+                let_parent_id = web_session.last_message_id
+
+            # Clasificar: stall despues de reads vs despues de writes
+            let_write_tools = ("write_file", "run_command", "make_directory",
+                               "move_file", "copy_file")
+            let_had_any_writes = any(
+                t[0] in let_write_tools for t in let_last_successful_tools
+            )
+
+            if not let_had_any_writes and let_stall_nudge_count < let_max_stall_nudges:
+                # Stall DESPUES de reads — DeepSeek penso 30s y no pudo generar
+                # la respuesta con multiples write_file. Nudge: pedir UNO a la vez.
+                let_stall_nudge_count += 1
+                print(
+                    f"  [agente] STALL despues de {len(let_last_successful_tools)} reads. "
+                    f"Nudge #{let_stall_nudge_count}/{let_max_stall_nudges}...",
+                    file=sys.stderr,
+                )
+                prompt = (
+                    "Tu respuesta anterior se corto (el stream termino sin contenido). "
+                    "Los archivos que leiste ya estan en tu contexto de conversacion. "
+                    "Para evitar sobrecarga, escribe los archivos DE A UNO. "
+                    "Genera un bloque ```tool_call``` con UN SOLO write_file. "
+                    "Empieza con package.json."
+                )
+                continue
+
+            # Stall despues de writes, o nudges agotados → resumen sintetico
+            if let_last_successful_tools:
+                let_summary_parts = []
+                for tname, tresult in let_last_successful_tools:
+                    let_summary_parts.append(f"- {tname}: {tresult}")
+                let_synthetic = (
+                    "Herramientas ejecutadas en esta sesion:\n"
+                    + "\n".join(let_summary_parts)
+                    + "\n\nResumen de progreso parcial."
+                )
+                print(
+                    f"  [agente] STALL en iter={step+1} tras {len(let_last_successful_tools)} tools OK. "
+                    f"Retornando resumen sintetico.",
+                    file=sys.stderr,
+                )
+                return let_synthetic
             print(
                 f"  [agente] STALL en iter={step+1}: {e}",
                 file=sys.stderr,
@@ -378,19 +431,62 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
                 )
         else:
             let_empty_retries = 0  # Reset si llega una respuesta valida
+            let_stall_nudge_count = 0  # Reset nudges en respuesta exitosa
 
         # Extraer tool calls
         tool_calls, clean_text = extract_tool_calls(response)
 
         if not tool_calls:
+            # --- Detector de alucinaciones ---
+            # Si DeepSeek dice "completado/exitosa/sin errores" pero NO ejecuto
+            # herramientas de escritura, esta alucinando — forzar uso de tools.
+            let_completion_keywords = [
+                "completado", "exitosa", "sin errores", "correctamente",
+                "he creado", "he replicado", "he copiado", "he ejecutado",
+                "npm install", "npm run build", "npm run dev",
+            ]
+            let_response_lower = response.lower()
+            let_claims_completion = any(kw in let_response_lower for kw in let_completion_keywords)
+            let_had_writes = any(
+                t[0] in ("write_file", "run_command", "make_directory", "move_file", "copy_file")
+                for t in let_last_successful_tools
+            )
+
+            if let_claims_completion and not let_had_writes and step < 3:
+                print(
+                    f"  [agente] !! ALUCINACION detectada en iter={step+1}: "
+                    f"dice 'completado' pero 0 herramientas de escritura ejecutadas. "
+                    f"Enviando correccion.",
+                    file=sys.stderr,
+                )
+                prompt = (
+                    "ATENCION: Tu respuesta anterior DESCRIBIO acciones pero NO las ejecutaste. "
+                    "No creaste ningun archivo ni ejecutaste ningun comando. "
+                    "DEBES usar herramientas (write_file, run_command, etc.) para realizar "
+                    "las acciones. NO describas lo que harias — HAZLO con tool_call. "
+                    "Continua con la tarea ahora."
+                )
+                continue
+
             # Respuesta final — limpiar si hubo tool calls previos
             cleaned = clean_final_response(response) if step > 0 else response
             return cleaned
 
-        # Ejecutar herramientas
+        # Ejecutar herramientas (limitar por iteracion para reducir presion de contexto)
+        let_pending_calls = []
+        if len(tool_calls) > let_max_tools_per_iter:
+            let_pending_calls = tool_calls[let_max_tools_per_iter:]
+            tool_calls = tool_calls[:let_max_tools_per_iter]
+            print(
+                f"  [agente] Limitando a {let_max_tools_per_iter} de "
+                f"{let_max_tools_per_iter + len(let_pending_calls)} tools en esta iter",
+                file=sys.stderr,
+            )
+
         results = []
         let_iter_errors = 0
         let_iter_ok = 0
+        let_last_successful_tools = []  # Reset para esta iteracion
         for idx, call in enumerate(tool_calls):
             tool_name = call["tool"]
             arguments = call["args"]
@@ -412,6 +508,9 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
                 result = tool_response.result
                 result_str = json.dumps(result, ensure_ascii=False) if isinstance(result, dict) else str(result)
                 let_iter_ok += 1
+                # Rastrear tools exitosos para stall recovery
+                let_tool_summary = result_str[:100] + ("..." if len(result_str) > 100 else "")
+                let_last_successful_tools.append((tool_name, let_tool_summary))
 
             results.append(format_tool_result(tool_name, result_str))
             print(
@@ -426,8 +525,18 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
             file=sys.stderr,
         )
 
-        # Detectar errores repetitivos — inyectar correccion a DeepSeek
+        # Notificar tools pendientes (si se limito la iteracion)
         prompt = "\n".join(results)
+        if let_pending_calls:
+            let_pending_names = [c["tool"] for c in let_pending_calls]
+            prompt += (
+                f"\n\nNOTA: Se ejecutaron {len(tool_calls)} de "
+                f"{len(tool_calls) + len(let_pending_calls)} herramientas. "
+                f"Pendientes: {', '.join(let_pending_names)}. "
+                f"Genera las pendientes en tu siguiente respuesta."
+            )
+
+        # Detectar errores repetitivos — inyectar correccion a DeepSeek
         let_repeated = {k: v for k, v in let_error_tracker.items()
                         if v >= let_max_repeat_errors}
         if let_repeated:
