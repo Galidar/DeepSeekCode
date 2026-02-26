@@ -325,6 +325,8 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
     prompt = user_message
     let_empty_retries = 0
     let_max_empty_retries = 2
+    let_error_tracker = {}  # {error_pattern_normalizado: count}
+    let_max_repeat_errors = 3
 
     for step in range(max_steps):
         try:
@@ -387,6 +389,8 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
 
         # Ejecutar herramientas
         results = []
+        let_iter_errors = 0
+        let_iter_ok = 0
         for idx, call in enumerate(tool_calls):
             tool_name = call["tool"]
             arguments = call["args"]
@@ -399,9 +403,15 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
 
             if hasattr(tool_response, 'error'):
                 result_str = f"Error: {tool_response.error.message}"
+                let_iter_errors += 1
+                # Rastrear errores repetitivos (normalizar quitando paths)
+                let_err_key = re.sub(r'[A-Z]:\\[^\s]+', '<path>', tool_response.error.message)
+                let_err_key = re.sub(r'/[^\s]+/', '<path>/', let_err_key)[:80]
+                let_error_tracker[let_err_key] = let_error_tracker.get(let_err_key, 0) + 1
             else:
                 result = tool_response.result
                 result_str = json.dumps(result, ensure_ascii=False) if isinstance(result, dict) else str(result)
+                let_iter_ok += 1
 
             results.append(format_tool_result(tool_name, result_str))
             print(
@@ -409,7 +419,30 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
                 file=sys.stderr,
             )
 
-        # Siguiente prompt son los resultados (encadenados via parent_id)
+        # Resumen de iteracion
+        print(
+            f"  [agente] === iter {step+1}/{max_steps}: "
+            f"{len(tool_calls)} tools ({let_iter_ok} OK, {let_iter_errors} err) ===",
+            file=sys.stderr,
+        )
+
+        # Detectar errores repetitivos — inyectar correccion a DeepSeek
         prompt = "\n".join(results)
+        let_repeated = {k: v for k, v in let_error_tracker.items()
+                        if v >= let_max_repeat_errors}
+        if let_repeated:
+            let_correction = "\n\nADVERTENCIA — Errores repetitivos detectados:\n"
+            for err_pattern, err_count in let_repeated.items():
+                let_correction += f"  - ({err_count}x) {err_pattern}\n"
+                print(
+                    f"  [agente] !! Error repetido ({err_count}x): {err_pattern}",
+                    file=sys.stderr,
+                )
+            let_correction += (
+                "CAMBIA DE ESTRATEGIA. No repitas la misma operacion que falla. "
+                "Si necesitas crear un directorio, usa make_directory primero. "
+                "Si un archivo no existe, verifica con list_directory antes de operar."
+            )
+            prompt += let_correction
 
     return "Se alcanzo el numero maximo de iteraciones en modo agente web."

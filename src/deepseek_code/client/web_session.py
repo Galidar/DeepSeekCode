@@ -281,6 +281,7 @@ class DeepSeekWebSession:
                 _diag_event("HTTP", "200 OK — stream abierto")
                 last_event = ""
                 stream_mode = "init"
+                let_last_heartbeat = time.time()
 
                 for line in resp.iter_lines():
                     if not line:
@@ -346,6 +347,15 @@ class DeepSeekWebSession:
                                 _diag_event("mode", f"{stream_mode}→thinking")
                             stream_mode = "thinking"
                             let_diag["thinking_chunks"] += 1
+                            # Heartbeat cada 10s durante thinking largo
+                            let_now = time.time()
+                            if let_now - let_last_heartbeat >= 10:
+                                print(
+                                    f"  [thinking] {round(let_now - let_diag['start_ts'], 1)}s... "
+                                    f"({let_diag['thinking_chunks']} chunks)",
+                                    file=sys.stderr,
+                                )
+                                let_last_heartbeat = let_now
                             continue
                         if path == "response/content":
                             if stream_mode != "content":
@@ -366,6 +376,14 @@ class DeepSeekWebSession:
                         # p="" chunks — only yield in content mode
                         if stream_mode == "thinking":
                             let_diag["thinking_chunks"] += 1
+                            let_now = time.time()
+                            if let_now - let_last_heartbeat >= 10:
+                                print(
+                                    f"  [thinking] {round(let_now - let_diag['start_ts'], 1)}s... "
+                                    f"({let_diag['thinking_chunks']} chunks)",
+                                    file=sys.stderr,
+                                )
+                                let_last_heartbeat = let_now
                             continue
                         if stream_mode != "content":
                             continue
