@@ -31,7 +31,7 @@ class SessionRole:
     role_type: RoleType
     label: str
     system_suffix: str  # Se agrega al system prompt base
-    max_steps: int = 10
+    max_steps: int = 50
     priority: int = 0  # Mayor = se ejecuta primero
 
 
@@ -80,7 +80,7 @@ def build_role(
     role_type: RoleType,
     label: str = "",
     domain: str = "",
-    max_steps: int = 10,
+    max_steps: int = 50,
 ) -> SessionRole:
     """Crea un SessionRole configurado.
 
@@ -127,7 +127,7 @@ def preset_generate_review() -> List[SessionRole]:
     """2 instancias: generador + reviewer."""
     return [
         build_role(RoleType.GENERATOR, "gen"),
-        build_role(RoleType.REVIEWER, "review", max_steps=3),
+        build_role(RoleType.REVIEWER, "review", max_steps=15),
     ]
 
 
@@ -143,8 +143,8 @@ def preset_full_pipeline() -> List[SessionRole]:
     """3 instancias: generador + reviewer + tester."""
     return [
         build_role(RoleType.GENERATOR, "gen"),
-        build_role(RoleType.REVIEWER, "review", max_steps=3),
-        build_role(RoleType.TESTER, "test", max_steps=3),
+        build_role(RoleType.REVIEWER, "review", max_steps=15),
+        build_role(RoleType.TESTER, "test", max_steps=15),
     ]
 
 

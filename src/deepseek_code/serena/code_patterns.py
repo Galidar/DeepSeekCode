@@ -157,8 +157,8 @@ def extract_python_body(lines: List[str], start: int) -> str:
             break
         body_lines.append(line.rstrip())
 
-    if len(body_lines) > 80:
-        body_lines = body_lines[:80]
+    if len(body_lines) > 300:
+        body_lines = body_lines[:300]
         body_lines.append("    # ... (truncado)")
 
     return "\n".join(body_lines)
@@ -170,7 +170,7 @@ def extract_brace_body(lines: List[str], start: int) -> str:
     brace_count = 0
     found_open = False
 
-    for i in range(start, min(start + 200, len(lines))):
+    for i in range(start, min(start + 500, len(lines))):
         line = lines[i]
         body_lines.append(line.rstrip())
 
@@ -184,8 +184,8 @@ def extract_brace_body(lines: List[str], start: int) -> str:
         if found_open and brace_count <= 0:
             break
 
-    if len(body_lines) > 80:
-        body_lines = body_lines[:80]
+    if len(body_lines) > 300:
+        body_lines = body_lines[:300]
         body_lines.append("  // ... (truncado)")
 
     return "\n".join(body_lines)

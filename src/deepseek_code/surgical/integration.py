@@ -183,6 +183,6 @@ def _initialize_from_claude_md(
         structure = "\n".join(structure_lines[:30])
 
     store.set_architecture(
-        description=f"Proyecto: {project_name}. {description[:200]}",
-        structure=structure[:500],
+        description=f"Proyecto: {project_name}. {description[:2000]}",
+        structure=structure[:5000],
     )

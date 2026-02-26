@@ -189,7 +189,7 @@ class MultiSession:
             if accumulated_context:
                 system += (
                     f"\n\nPREVIOUS OUTPUT:\n"
-                    f"{accumulated_context[:6000]}"
+                    f"{accumulated_context[:60000]}"
                 )
 
             result = await self._run_instance(

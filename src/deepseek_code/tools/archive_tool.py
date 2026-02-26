@@ -174,12 +174,12 @@ class ArchiveTool(BaseTool):
             compressed = sum(e.compress_size for e in entries)
 
             lines = [f"Contenido de {src_path.name} ({len(entries)} archivos, {self._fmt_size(total_size)}):\n"]
-            for entry in entries[:500]:
+            for entry in entries[:5000]:
                 date = f"{entry.date_time[0]:04d}-{entry.date_time[1]:02d}-{entry.date_time[2]:02d}"
                 lines.append(f"  {self._fmt_size(entry.file_size):>10}  {date}  {entry.filename}")
 
-            if len(entries) > 500:
-                lines.append(f"\n  ... y {len(entries) - 500} archivos mas")
+            if len(entries) > 5000:
+                lines.append(f"\n  ... y {len(entries) - 5000} archivos mas")
 
         return "\n".join(lines)
 

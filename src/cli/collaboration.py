@@ -27,8 +27,8 @@ async def run_collaborative_delegation(
     project_context: dict = None,
     enable_briefing: bool = True,
     enable_review: bool = True,
-    max_review_rounds: int = 2,
-    max_continuations: int = 3,
+    max_review_rounds: int = 5,
+    max_continuations: int = 8,
     session_name: str = None,
     pending_injections: list = None,
 ) -> Tuple[str, int, Optional[dict]]:
@@ -174,7 +174,7 @@ async def _execute_chunked(
 
 async def _execute_with_continuation(
     app, user_prompt: str, session_name: str, system_prompt: str = None,
-    pending_injections: list = None, max_continuations: int = 3,
+    pending_injections: list = None, max_continuations: int = 8,
 ) -> Tuple[str, int]:
     """Ejecuta delegacion con auto-continuacion por truncamiento.
 
@@ -300,11 +300,11 @@ def _build_briefing_message(task: str, project_context: dict) -> str:
 
     if project_context.get("structure"):
         structure = project_context["structure"]
-        if len(structure) > 800:
-            structure = structure[:800] + "..."
+        if len(structure) > 8000:
+            structure = structure[:8000] + "..."
         parts.append(f"\nESTRUCTURA:\n{structure}")
 
-    parts.append(f"\nTAREA QUE VIENE: {task[:300]}")
+    parts.append(f"\nTAREA QUE VIENE: {task[:5000]}")
 
     # Instrucciones de scope basadas en la leccion de Jet Combat 3D:
     # DeepSeek recibia 20 bugs y reescribia todo en vez de parchear
@@ -399,7 +399,7 @@ def build_project_context(surgical_store) -> Optional[dict]:
         # Arquitectura
         arch = data.get("architecture", {})
         if arch:
-            context["structure"] = str(arch)[:500]
+            context["structure"] = str(arch)[:5000]
 
         return context if any(context.values()) else None
 

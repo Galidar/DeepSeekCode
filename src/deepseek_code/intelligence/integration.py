@@ -86,7 +86,7 @@ def on_post_commit(
         corrections = learn_from_user_corrections(
             project_root=project_root,
             last_delegation_response=last_delegation_response,
-            max_commits_to_check=3,
+            max_commits_to_check=15,
         )
 
         # Si tenemos store, guardar las correcciones
@@ -109,7 +109,7 @@ def on_post_commit(
 
 def get_intelligence_briefing(
     store_data: Optional[dict] = None,
-    token_budget: int = 500,
+    token_budget: int = 5000,
 ) -> str:
     """Construye briefing compacto con datos del Intelligence Package.
 

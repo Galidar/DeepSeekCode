@@ -189,7 +189,7 @@ class SymbolsOverviewTool(BaseTool):
                     found.append({
                         "name": m.group(1),
                         "line": i + 1,
-                        "preview": line.strip()[:120],
+                        "preview": line.strip()[:500],
                     })
             if found:
                 symbols[kind] = found
@@ -289,7 +289,7 @@ class FindSymbolTool(BaseTool):
                             "kind": kind,
                             "file": rel,
                             "line": i + 1,
-                            "preview": line.strip()[:150],
+                            "preview": line.strip()[:500],
                         }
 
                         if include_body:

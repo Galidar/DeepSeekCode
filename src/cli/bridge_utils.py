@@ -86,8 +86,7 @@ def check_credentials(config: dict) -> bool:
     """
     bearer = config.get("bearer_token")
     cookies = config.get("cookies")
-    api_key = os.getenv("DEEPSEEK_API_KEY") or config.get("api_key")
-    return bool((bearer and cookies) or api_key)
+    return bool(bearer and cookies)
 
 
 def handle_no_credentials(json_mode: bool, originals=None, mode: str = ""):

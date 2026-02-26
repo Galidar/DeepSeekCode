@@ -8,10 +8,10 @@ Respeta un budget de tokens configurable.
 from typing import Optional
 
 
-# Budget de tokens para el briefing
-DEFAULT_TOKEN_BUDGET = 3000
-MIN_TOKEN_BUDGET = 1000
-MAX_TOKEN_BUDGET = 5000
+# Budget de tokens para el briefing (1M context → budgets proporcionales)
+DEFAULT_TOKEN_BUDGET = 15000
+MIN_TOKEN_BUDGET = 5000
+MAX_TOKEN_BUDGET = 25000
 
 
 def _estimate_tokens(text: str) -> int:
@@ -179,9 +179,9 @@ def _format_architecture(store_data: dict) -> str:
 
     lines = ["ARQUITECTURA DEL PROYECTO:"]
     if desc:
-        lines.append(desc[:500])
+        lines.append(desc[:5000])
     if struct:
-        lines.append(struct[:500])
+        lines.append(struct[:5000])
 
     decisions = arch.get("key_decisions", [])
     for d in decisions[:5]:

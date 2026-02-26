@@ -64,7 +64,7 @@ def build_negotiate_prompt(task: str, catalog: str) -> str:
         Prompt listo para enviar (~100 tokens + catalogo)
     """
     return (
-        f"TASK: {task[:500]}\n\n"
+        f"TASK: {task[:5000]}\n\n"
         f"{catalog}\n\n"
         "List ONLY the skill names you need (one per line), or NONE:"
     )
@@ -85,10 +85,10 @@ def build_briefing_prompt(
     Returns:
         Prompt de briefing compacto
     """
-    parts = [f"PROJECT BRIEF:\n{project_info[:2000]}"]
+    parts = [f"PROJECT BRIEF:\n{project_info[:20000]}"]
     if conventions:
-        parts.append(f"\nCONVENTIONS:\n{conventions[:500]}")
-    parts.append(f"\nTASK: {task[:500]}")
+        parts.append(f"\nCONVENTIONS:\n{conventions[:5000]}")
+    parts.append(f"\nTASK: {task[:5000]}")
     parts.append("\nConfirm understanding and note any concerns:")
     return "\n".join(parts)
 
@@ -108,7 +108,7 @@ def build_review_prompt(
     """
     issues_text = "\n".join(f"- {issue}" for issue in issues[:10])
     return (
-        f"CODE WITH ISSUES:\n```\n{code[:8000]}\n```\n\n"
+        f"CODE WITH ISSUES:\n```\n{code[:80000]}\n```\n\n"
         f"PROBLEMS FOUND:\n{issues_text}\n\n"
         "Fix ALL issues. Return COMPLETE corrected code:"
     )
@@ -129,11 +129,11 @@ def build_strategy_prompt(
     Returns:
         Prompt de estrategia compacto
     """
-    parts = [f"TASK: {task[:500]}"]
+    parts = [f"TASK: {task[:5000]}"]
     if template_info:
-        parts.append(f"TEMPLATE: {template_info[:200]}")
+        parts.append(f"TEMPLATE: {template_info[:5000]}")
     if project_info:
-        parts.append(f"PROJECT: {project_info[:200]}")
+        parts.append(f"PROJECT: {project_info[:5000]}")
     parts.append(
         "\nModes available: "
         "delegate (single, fast), "

@@ -121,7 +121,7 @@ def _detect_truncation(response):
     # Linea incompleta (no termina en ; } ) o comentario)
     if last_line and not re.search(r'[;}\)\]\'\"\/]$', last_line):
         if not last_line.startswith('//') and not last_line.startswith('/*'):
-            signs.append(f"Ultima linea incompleta: '{last_line[:60]}...'")
+            signs.append(f"Ultima linea incompleta: '{last_line[:200]}...'")
 
     # Llaves sin cerrar
     open_braces = response.count('{') - response.count('}')

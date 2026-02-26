@@ -76,7 +76,7 @@ def _compute_tfidf_scores(
 # --- Configuracion del scoring hibrido ---
 _TFIDF_WEIGHT = 0.35
 _KEYWORD_WEIGHT = 0.65
-_HYBRID_THRESHOLD = 0.08
+_HYBRID_THRESHOLD = 0.20
 
 
 def detect_relevant_skills(
@@ -265,7 +265,9 @@ def build_skills_context(
     if budget and budget["total"] == 0:
         return ""
 
-    relevant = detect_relevant_skills(message, max_skills)
+    # Limitar skills segun complejidad: code_simple maximo 2
+    effective_max = min(max_skills, 2) if task_level == "code_simple" else max_skills
+    relevant = detect_relevant_skills(message, effective_max)
     if not relevant:
         return ""
 

@@ -138,7 +138,7 @@ def _run_quantum_inner(
     # SessionOrchestrator detecta inyecciones (skills, surgical, global)
     skills_dir = config.get("skills_dir", SKILLS_DIR)
     appdata_dir = config.get("_appdata_dir", APPDATA_DIR)
-    task_text = task + (" " + template[:500] if template else "")
+    task_text = task + (" " + template[:5000] if template else "")
 
     orchestrator = SessionOrchestrator(
         get_session_store(), skills_dir=skills_dir, appdata_dir=appdata_dir,
@@ -204,9 +204,9 @@ def _run_quantum_inner(
             # Fallback: secuencial con contexto de AMBAS respuestas
             combined_context = (
                 f"// Respuesta del angulo A ({angle_a.label}):\n"
-                f"{dual_result.response_a[:3000]}\n\n"
+                f"{dual_result.response_a[:30000]}\n\n"
                 f"// Respuesta del angulo B ({angle_b.label}):\n"
-                f"{dual_result.response_b[:3000]}"
+                f"{dual_result.response_b[:30000]}"
             )
             fallback = asyncio.run(
                 dual.sequential_fallback(

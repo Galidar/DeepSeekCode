@@ -6,6 +6,13 @@ import argparse
 import os
 import sys
 
+try:
+    import msvcrt
+    _HAS_MSVCRT = True
+except ImportError:
+    _HAS_MSVCRT = False
+    import select
+
 from rich.console import Console
 from rich.prompt import Prompt
 
@@ -32,6 +39,45 @@ from cli.commands import run_agent, run_skill, list_skills, handle_serena, handl
 from cli.commands_helpers import handle_web_login, handle_web_test, handle_health, handle_account, handle_logout
 
 console = Console()
+
+
+def _drain_stdin_buffer() -> str:
+    """Drena lineas adicionales del buffer de stdin (texto pegado multilinea).
+
+    En Windows usa msvcrt.kbhit(), en Unix usa select().
+    Retorna las lineas extra concatenadas, o cadena vacia si no hay nada.
+    """
+    extra_lines = []
+    try:
+        if _HAS_MSVCRT:
+            while msvcrt.kbhit():
+                line = sys.stdin.readline()
+                if not line:
+                    break
+                extra_lines.append(line.rstrip('\n').rstrip('\r'))
+        else:
+            while select.select([sys.stdin], [], [], 0.05)[0]:
+                line = sys.stdin.readline()
+                if not line:
+                    break
+                extra_lines.append(line.rstrip('\n').rstrip('\r'))
+    except Exception:
+        pass
+    return '\n'.join(extra_lines)
+
+
+def read_multiline_input(prompt_str: str) -> str:
+    """Lee input del usuario con soporte para texto pegado multilinea.
+
+    1. Muestra el prompt y lee la primera linea con Prompt.ask()
+    2. Drena cualquier linea adicional en el buffer de stdin (texto pegado)
+    3. Retorna todo el texto unido
+    """
+    first_line = Prompt.ask(prompt_str)
+    extra = _drain_stdin_buffer()
+    if extra:
+        return first_line + '\n' + extra
+    return first_line
 
 
 class DeepSeekCodeApp:
@@ -70,7 +116,7 @@ class DeepSeekCodeApp:
             deepseek_client=self.client
         ))
 
-        self.rate_limiter = RateLimiter(max_calls=50, per_seconds=60)
+        self.rate_limiter = RateLimiter(max_calls=200, per_seconds=60)
         self.token_monitor = TokenMonitor(self.session_manager)
 
         self.serena_manager = None
@@ -84,38 +130,29 @@ class DeepSeekCodeApp:
             )
 
     def _create_client(self, config):
-        """Crea el cliente DeepSeek segun la configuracion."""
+        """Crea el cliente DeepSeek en modo web (unico modo soportado)."""
         bearer_token = config.get("bearer_token")
         cookies = config.get("cookies")
-        api_key = os.getenv("DEEPSEEK_API_KEY") or config.get("api_key")
         wasm_path = config.get("wasm_path", os.path.join(APPDATA_DIR, "sha3_wasm_bg.wasm"))
 
-        if bearer_token and cookies:
-            if not os.path.exists(wasm_path):
-                console.print(f"[cyan]{t('downloading_wasm_needed')}[/cyan]")
-                from deepseek_code.auth.web_login import _download_wasm
-                if not _download_wasm(wasm_path):
-                    raise FileNotFoundError(t("wasm_failed"))
-                console.print(f"[green]{t('wasm_downloaded')}[/green]")
-            console.print(f"[green]{t('mode_web_active')}[/green]")
-            return DeepSeekCodeClient(
-                bearer_token=bearer_token, cookies=cookies, wasm_path=wasm_path,
-                mcp_server=self.mcp_server, memory_path=config.get("memory_path"),
-                summary_threshold=config.get("summary_threshold", 80),
-                skills_dir=config.get("skills_dir", SKILLS_DIR),
-                session_manager=self.session_manager,
-            )
-        elif api_key:
-            console.print(f"[green]{t('mode_api_active')}[/green]")
-            return DeepSeekCodeClient(
-                api_key=api_key, mcp_server=self.mcp_server,
-                memory_path=config.get("memory_path"),
-                summary_threshold=config.get("summary_threshold", 80),
-                skills_dir=config.get("skills_dir", SKILLS_DIR),
-                session_manager=self.session_manager,
-            )
-        else:
+        if not (bearer_token and cookies):
             raise ValueError(t("no_credentials"))
+
+        if not os.path.exists(wasm_path):
+            console.print(f"[cyan]{t('downloading_wasm_needed')}[/cyan]")
+            from deepseek_code.auth.web_login import _download_wasm
+            if not _download_wasm(wasm_path):
+                raise FileNotFoundError(t("wasm_failed"))
+            console.print(f"[green]{t('wasm_downloaded')}[/green]")
+
+        console.print(f"[green]{t('mode_web_active')}[/green]")
+        return DeepSeekCodeClient(
+            bearer_token=bearer_token, cookies=cookies, wasm_path=wasm_path,
+            mcp_server=self.mcp_server, memory_path=config.get("memory_path"),
+            summary_threshold=config.get("summary_threshold", 80),
+            skills_dir=config.get("skills_dir", SKILLS_DIR),
+            session_manager=self.session_manager,
+        )
 
     async def run_interactive(self):
         """Modo interactivo"""
@@ -147,7 +184,7 @@ class DeepSeekCodeApp:
         await self.token_monitor.start()
 
         while True:
-            user_input = Prompt.ask(get_prompt_string(self.chat_mgr.current))
+            user_input = read_multiline_input(get_prompt_string(self.chat_mgr.current))
             if user_input.lower() == '/exit':
                 await self.token_monitor.stop()
                 console.print(f"[yellow]{t('goodbye')}[/yellow]")

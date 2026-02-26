@@ -14,7 +14,7 @@ console = Console()
 
 async def run_knowledge_skill(client, skill, query: str = None):
     """Ejecuta un skill de conocimiento: inyecta el contenido como contexto."""
-    desc_preview = skill.description[:100] + "..." if len(skill.description) > 100 else skill.description
+    desc_preview = skill.description[:500] + "..." if len(skill.description) > 500 else skill.description
     console.print(Panel.fit(
         f"[bold]{skill.name}[/bold] — {desc_preview}\n"
         f"[dim]Knowledge: {len(skill.content)} chars[/dim]",

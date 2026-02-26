@@ -41,8 +41,8 @@ def build_summary_prompt(messages: List[Dict]) -> str:
         role = role_map.get(msg["role"], msg["role"])
         content = msg.get("content", "") or ""
         # Truncar resultados de herramientas muy largos
-        if msg["role"] in ("tool", "tool_result") and len(content) > 500:
-            content = content[:500] + "... [truncado]"
+        if msg["role"] in ("tool", "tool_result") and len(content) > 10000:
+            content = content[:10000] + "... [truncado]"
         prompt += f"{role}: {content}\n"
     prompt += "\nResumen estructurado:"
     return prompt

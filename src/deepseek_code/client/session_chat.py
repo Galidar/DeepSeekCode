@@ -81,7 +81,7 @@ async def chat_in_session(
     user_message: str,
     system_prompt: Optional[str] = None,
     tools: Optional[List[Dict]] = None,
-    max_steps: int = 10,
+    max_steps: int = 50,
     thinking_enabled: bool = True,
     session_manager=None,
     pending_injections: Optional[List[Dict]] = None,

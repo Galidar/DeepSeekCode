@@ -40,7 +40,7 @@ class ConflictResolution:
             "strategy": self.strategy,
             "explanation": self.explanation,
             "conflicts_resolved": self.conflicts_resolved,
-            "preview": self.resolved_content[:500] + "..." if len(self.resolved_content) > 500 else self.resolved_content,
+            "preview": self.resolved_content[:5000] + "..." if len(self.resolved_content) > 5000 else self.resolved_content,
         }
 
 
@@ -183,7 +183,7 @@ def build_resolution_prompt(conflict: ConflictInfo, project_context: str = "") -
         parts.extend([
             "",
             "Contexto del proyecto:",
-            project_context[:500],
+            project_context[:5000],
         ])
 
     parts.extend([

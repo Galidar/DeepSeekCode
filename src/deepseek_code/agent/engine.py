@@ -53,14 +53,14 @@ class AgentEngine:
     def __init__(
         self,
         client,  # DeepSeekCodeClient
-        max_steps: int = 25,
+        max_steps: int = 50,
         min_delay_ms: int = 500,
         logs_dir: Optional[str] = None,
         on_step: Optional[Callable] = None,
         on_status: Optional[Callable] = None,
     ):
         self.client = client
-        self.max_steps = min(max_steps, 100)  # Tope absoluto: 100
+        self.max_steps = min(max_steps, 200)  # Tope absoluto: 200
         self.min_delay_ms = min_delay_ms
         self.on_step = on_step
         self.on_status = on_status
@@ -104,7 +104,7 @@ class AgentEngine:
                 response = await self.client.chat_with_system(
                     user_message=step_prompt,
                     system_prompt=AGENT_SYSTEM_PROMPT,
-                    max_steps=10  # Permitir hasta 10 tool calls por paso
+                    max_steps=50  # Permitir hasta 50 tool calls por paso
                 )
             except Exception as e:
                 return self._finalize(goal, AgentStatus.FAILED,
@@ -113,10 +113,10 @@ class AgentEngine:
 
             step_duration = int((time.time() - step_start) * 1000)
 
-            # Registrar paso (guardar hasta 2000 chars para el log)
+            # Registrar paso (guardar hasta 20000 chars para el log)
             step_record = AgentStep(
                 step_number=step_num,
-                response=response[:2000] if response else "",
+                response=response[:20000] if response else "",
                 timestamp=datetime.now().isoformat(),
                 duration_ms=step_duration
             )
@@ -139,7 +139,7 @@ class AgentEngine:
         last_response = self._results[-1] if self._results else "Sin respuesta"
         return self._finalize(
             goal, AgentStatus.MAX_STEPS,
-            f"Se alcanzaron {self.max_steps} pasos. Ultimo resultado:\n{last_response[:300]}",
+            f"Se alcanzaron {self.max_steps} pasos. Ultimo resultado:\n{last_response[:3000]}",
             start_time
         )
 
@@ -163,7 +163,7 @@ class AgentEngine:
                         for s in self._steps
                     ],
                     status=status.value,
-                    summary=summary[:1000],
+                    summary=summary[:10000],
                     duration_s=duration,
                     error=error
                 )

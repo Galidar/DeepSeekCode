@@ -84,18 +84,10 @@ class RunCommandTool(BaseTool):
                 except ValueError as e:
                     return {"error": f"Error parseando comando (comillas incorrectas): {e}"}
 
-                first_word = cmd_parts[0].lower() if cmd_parts else ""
-
-                # Comandos internos de CMD que no son ejecutables independientes
-                internal_cmds = [
-                    "dir", "type", "echo", "copy", "move", "del", "ren",
-                    "md", "rd", "cd", "cls", "ver", "time", "date", "findstr"
-                ]
-
-                if first_word in internal_cmds:
-                    full_cmd = ["cmd.exe", "/c"] + cmd_parts
-                else:
-                    full_cmd = cmd_parts
+                # En Windows, siempre usar cmd.exe /c para resolver .cmd/.bat
+                # (npm, yarn, pip, etc. son scripts .cmd, no .exe)
+                # Los operadores peligrosos ya estan bloqueados por CommandValidator
+                full_cmd = ["cmd.exe", "/c"] + cmd_parts
             else:
                 try:
                     full_cmd = shlex.split(command)

@@ -141,12 +141,17 @@ def classify_task(message: str, is_delegation: bool = False) -> TaskLevel:
         return TaskLevel.CODE_COMPLEX
 
     # --- Nivel 2: Code Simple ---
-    if code_score >= 1:
+    # Requiere al menos 2 indicadores de codigo para evitar falsos positivos
+    # (1 solo indicador como "file" o "test" no justifica inyectar skills)
+    if code_score >= 2:
         return TaskLevel.CODE_SIMPLE
 
     # --- Nivel 1: Simple ---
-    # Preguntas conceptuales sin pedir codigo
+    # Preguntas conceptuales o mensajes con 1 solo indicador de codigo
     if QUESTION_PATTERNS.match(normalized):
+        return TaskLevel.SIMPLE
+
+    if code_score == 1:
         return TaskLevel.SIMPLE
 
     # Mensajes medianos sin indicadores claros → sesgo conservador → SIMPLE

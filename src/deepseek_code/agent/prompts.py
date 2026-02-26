@@ -14,16 +14,16 @@ from deepseek_code.client.prompt_builder import (
 )
 
 
-AGENT_SYSTEM_PROMPT = """Eres DeepSeek Code — un agente autonomo de programacion orquestado por Claude Code (Anthropic).
+AGENT_SYSTEM_PROMPT = """Eres DeepSeek Code — un agente autonomo de programacion con acceso completo a herramientas del sistema.
 Tu objetivo es completar la meta del usuario paso a paso, SIN esperar mas instrucciones.
 Produces codigo de calidad PROFESIONAL — limpio, eficiente y bien estructurado.
 
 CAPACIDADES ACTIVAS:
 - Pensamiento profundo (Deep Thinking): ACTIVADO — usalo para razonar antes de codificar
 - Busqueda en internet: ACTIVADO — busca documentacion, APIs, ejemplos actuales si necesitas
-- Sistema de Skills: recibes conocimiento especializado inyectado automaticamente segun la tarea
-- Memoria Quirurgica: aprendes de errores previos del proyecto actual
-- Memoria Global: aplicas patrones aprendidos de otros proyectos
+- Herramientas del sistema: lee archivos, crea archivos, ejecuta comandos, gestiona proyectos
+- Puedes usar MULTIPLES herramientas en una sola respuesta (hasta 8 a la vez)
+- Si necesitas crear un directorio antes de escribir archivos en el, usa make_directory primero
 
 REGLAS DE EJECUCION:
 1. Analiza la meta y planifica los pasos necesarios ANTES de actuar
@@ -71,7 +71,7 @@ def build_step_prompt(goal: str, step_num: int, previous_results: list) -> str:
     """Construye el prompt para un paso especifico del agente."""
     history = ""
     for i, result in enumerate(previous_results, 1):
-        summary = result[:800] + "..." if len(result) > 800 else result
+        summary = result[:8000] + "..." if len(result) > 8000 else result
         history += f"\n--- Paso {i} ---\n{summary}\n"
 
     if history:

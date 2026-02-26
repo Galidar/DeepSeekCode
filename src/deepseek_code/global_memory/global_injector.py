@@ -6,10 +6,10 @@ errores recurrentes, y rendimiento por modo.
 """
 
 
-# Budget de tokens para el briefing global
-DEFAULT_BUDGET = 2000
-MIN_BUDGET = 500
-MAX_BUDGET = 3000
+# Budget de tokens para el briefing global (1M context → budgets proporcionales)
+DEFAULT_BUDGET = 8000
+MIN_BUDGET = 2000
+MAX_BUDGET = 15000
 
 # Minimo de inyecciones para que una skill sea significativa
 MIN_SKILL_SAMPLES = 3

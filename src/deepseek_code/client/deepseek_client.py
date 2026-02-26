@@ -222,7 +222,7 @@ class DeepSeekCodeClient:
             for t in tools
         ]
 
-    async def chat(self, user_message: str, max_steps: int = 10) -> str:
+    async def chat(self, user_message: str, max_steps: int = 50) -> str:
         """Metodo principal de chat con herramientas y resumen automatico."""
         # Resumen progresivo: no interrumpe la conversacion, solo comprime
         resumen_hecho, notificacion, _ = await self._check_context_and_summarize()
@@ -244,7 +244,7 @@ class DeepSeekCodeClient:
         else:
             return await self._chat_web(max_steps)
 
-    async def chat_with_system(self, user_message: str, system_prompt: str, max_steps: int = 10) -> str:
+    async def chat_with_system(self, user_message: str, system_prompt: str, max_steps: int = 50) -> str:
         """Chat con system prompt personalizado (para agentes). Historial independiente."""
         if self.mode == "api":
             return await self._chat_with_system_api(user_message, system_prompt, max_steps)
@@ -252,7 +252,7 @@ class DeepSeekCodeClient:
             return await self._chat_with_system_web(user_message, system_prompt, max_steps)
 
     async def chat_in_session(self, session_name: str, user_message: str,
-                               system_prompt: str = None, max_steps: int = 10,
+                               system_prompt: str = None, max_steps: int = 50,
                                pending_injections: list = None) -> str:
         """Chat con continuidad de sesion persistente (multi-sesion).
 

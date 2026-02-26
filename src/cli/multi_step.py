@@ -128,8 +128,8 @@ def _build_context_from_results(
         if not prev or not prev.success:
             continue
         response = prev.response
-        if len(response) > 4000:
-            response = response[:4000] + "\n\n[... respuesta truncada ...]"
+        if len(response) > 60000:
+            response = response[:60000] + "\n\n[... respuesta truncada ...]"
         parts.append(f"\n--- Resultado de '{step_id}' ---\n{response}\n")
 
     if not parts:
@@ -178,7 +178,7 @@ async def _execute_step(
         prev_context = _build_context_from_results(step.context_from, completed)
         skills_dir = config.get("skills_dir", SKILLS_DIR)
         appdata_dir = config.get("_appdata_dir", APPDATA_DIR)
-        task_text = step.task + (" " + template[:500] if template else "")
+        task_text = step.task + (" " + template[:5000] if template else "")
 
         # Ensamblar system prompt modular
         base_system = assemble_delegate_prompt(
@@ -315,7 +315,7 @@ def run_multi_step(
         for group in groups:
             if len(group) == 1:
                 step = group[0]
-                print(f"  [paso] {step.id}: {step.task[:80]}...", file=sys.stderr)
+                print(f"  [paso] {step.id}: {step.task[:300]}...", file=sys.stderr)
                 result = asyncio.run(_execute_step(app, step, completed, config))
                 completed[step.id] = result
                 step_results.append(result.to_dict())

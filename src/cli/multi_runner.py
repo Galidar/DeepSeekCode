@@ -134,7 +134,7 @@ def _run_multi_inner(
 
     skills_dir = config.get("skills_dir", SKILLS_DIR)
     appdata_dir = config.get("_appdata_dir", APPDATA_DIR)
-    task_text = task + (" " + template[:500] if template else "")
+    task_text = task + (" " + template[:5000] if template else "")
 
     orchestrator = SessionOrchestrator(
         get_session_store(), skills_dir=skills_dir, appdata_dir=appdata_dir,
@@ -215,7 +215,7 @@ def _run_multi_inner(
             "duration_s": round(total_duration, 1),
         }
         if reviewer_issues:
-            result["review"] = reviewer_issues[:2000]
+            result["review"] = reviewer_issues[:20000]
         if validation:
             result["validation"] = {
                 "valid": validation["valid"],

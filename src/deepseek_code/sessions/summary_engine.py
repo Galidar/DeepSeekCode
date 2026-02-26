@@ -132,8 +132,8 @@ def _extract_topic(message: str) -> str:
     cleaned = message.strip()
     # Take first sentence or first 50 chars
     first_sentence = re.split(r'[.!?\n]', cleaned)[0].strip()
-    if len(first_sentence) > 50:
-        first_sentence = first_sentence[:50].rsplit(' ', 1)[0] + "..."
+    if len(first_sentence) > 200:
+        first_sentence = first_sentence[:200].rsplit(' ', 1)[0] + "..."
     return first_sentence or "Sin tema"
 
 
@@ -146,19 +146,19 @@ def _classify_exchange(user_message: str, response: str) -> str:
     - "Diseño estructura de base de datos"
     """
     msg_lower = user_message.lower()
-    resp_lower = response.lower()[:500] if response else ""
+    resp_lower = response.lower()[:5000] if response else ""
 
     # Error fix patterns
     if any(kw in msg_lower for kw in ["error", "fix", "bug", "corrig", "fallo", "crash"]):
-        return f"Correccion: {user_message[:40]}"
+        return f"Correccion: {user_message[:200]}"
 
     # Code generation patterns
     if any(kw in resp_lower for kw in ["```", "function ", "class ", "def ", "const ", "let "]):
-        return f"Codigo: {user_message[:40]}"
+        return f"Codigo: {user_message[:200]}"
 
     # Design/architecture patterns
     if any(kw in msg_lower for kw in ["diseñ", "design", "arquitect", "structur", "patron"]):
-        return f"Diseño: {user_message[:40]}"
+        return f"Diseño: {user_message[:200]}"
 
     # Default: describe the action
-    return f"Consulta: {user_message[:40]}"
+    return f"Consulta: {user_message[:200]}"

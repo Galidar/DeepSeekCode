@@ -114,7 +114,7 @@ def run_agent_oneshot(goal: str, json_mode: bool = False, config_path: str = Non
 
         agent = AgentEngine(
             client=app.client,
-            max_steps=config.get("agent_max_steps", 25),
+            max_steps=config.get("agent_max_steps", 50),
             logs_dir=os.path.join(APPDATA_DIR, "agent_logs")
         )
 
@@ -241,7 +241,7 @@ def run_delegate_oneshot(
         )
 
         skills_dir = config.get("skills_dir", SKILLS_DIR)
-        task_text = task + (" " + template[:500] if template else "")
+        task_text = task + (" " + template[:5000] if template else "")
 
         orchestrator = SessionOrchestrator(
             get_session_store(), skills_dir=skills_dir, appdata_dir=APPDATA_DIR,

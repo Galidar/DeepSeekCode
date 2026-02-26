@@ -104,7 +104,7 @@ async def run_agent(client, config, mcp_server, appdata_dir: str, goal: str):
     ))
 
     def on_step(step):
-        preview = step.response[:200] + "..." if len(step.response) > 200 else step.response
+        preview = step.response[:2000] + "..." if len(step.response) > 2000 else step.response
         console.print(f"  [cyan]{t('agent_step', n=step.step_number, preview=preview)}[/cyan]")
 
     def on_status(status):
@@ -112,7 +112,7 @@ async def run_agent(client, config, mcp_server, appdata_dir: str, goal: str):
 
     agent = AgentEngine(
         client=client,
-        max_steps=config.get("agent_max_steps", 25),
+        max_steps=config.get("agent_max_steps", 50),
         logs_dir=os.path.join(appdata_dir, "agent_logs"),
         on_step=on_step,
         on_status=on_status
@@ -240,7 +240,7 @@ async def list_skills(config, appdata_dir: str):
     for name, skill in skills.items():
         if isinstance(skill, KnowledgeSkill):
             size_kb = len(skill.content) / 1024
-            lines.append(f"**{name}** [{t('knowledge_tag', size=f'{size_kb:.0f}')}] — {skill.description[:80]}...")
+            lines.append(f"**{name}** [{t('knowledge_tag', size=f'{size_kb:.0f}')}] — {skill.description[:300]}...")
         else:
             param_names = ", ".join(p.name for p in skill.parameters)
             lines.append(f"**{name}** [{t('workflow_tag')}] ({param_names}) — {skill.description}")

@@ -108,7 +108,7 @@ class EditFileTool(BaseTool):
                 if old is None:
                     return f"Error en operacion {i+1}: replace requiere 'old_text'"
                 if old not in content:
-                    preview = old[:80] + '...' if len(old) > 80 else old
+                    preview = old[:300] + '...' if len(old) > 300 else old
                     return f"Error en operacion {i+1}: texto no encontrado: '{preview}'"
 
                 occurrences = content.count(old)

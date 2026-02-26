@@ -30,8 +30,8 @@ class CorrectionPattern:
         return {
             "pattern_type": self.pattern_type,
             "description": self.description,
-            "example_before": self.before[:200],
-            "example_after": self.after[:200],
+            "example_before": self.before[:2000],
+            "example_after": self.after[:2000],
             "frequency": self.frequency,
             "auto_apply": self.auto_apply,
         }
@@ -82,7 +82,7 @@ CORRECTION_CLASSIFIERS = [
 def learn_from_user_corrections(
     project_root: str,
     last_delegation_response: str = "",
-    max_commits_to_check: int = 3,
+    max_commits_to_check: int = 15,
 ) -> List[CorrectionPattern]:
     """Compara la salida de DeepSeek con los cambios reales del usuario.
 
@@ -209,7 +209,7 @@ def _find_example(lines: list, patterns: list) -> str:
     for pattern in patterns:
         for line in lines:
             if re.search(pattern, line):
-                return line[:200]
+                return line[:2000]
     return ""
 
 
@@ -225,9 +225,9 @@ def _extract_naming_patterns(
     removed_names = set()
     name_pattern = r"\b([a-zA-Z_]\w{2,30})\b"
 
-    for line in added_lines[:100]:
+    for line in added_lines[:500]:
         added_names.update(re.findall(name_pattern, line))
-    for line in removed_lines[:100]:
+    for line in removed_lines[:500]:
         removed_names.update(re.findall(name_pattern, line))
 
     # Nombres que aparecen en added pero no en removed (y viceversa)
@@ -250,7 +250,7 @@ def _extract_naming_patterns(
     return renames[:5]
 
 
-def build_shadow_briefing(store_data: dict, token_budget: int = 500) -> str:
+def build_shadow_briefing(store_data: dict, token_budget: int = 5000) -> str:
     """Construye briefing con correcciones aprendidas para inyectar.
 
     Args:
@@ -282,8 +282,8 @@ def build_shadow_briefing(store_data: dict, token_budget: int = 500) -> str:
         before = c.get("example_before", "")
         after = c.get("example_after", "")
         if before and after:
-            lines.append(f"         Antes: {before[:80]}")
-            lines.append(f"         Ahora: {after[:80]}")
+            lines.append(f"         Antes: {before[:500]}")
+            lines.append(f"         Ahora: {after[:500]}")
 
     result = "\n".join(lines) + "\n"
 

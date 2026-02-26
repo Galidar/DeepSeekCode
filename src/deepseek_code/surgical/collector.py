@@ -139,7 +139,7 @@ def build_delegation_record(
         dict con el registro completo
     """
     record = {
-        "task": task[:200],
+        "task": task[:2000],
         "mode": mode,
         "success": success,
         "duration_s": round(duration_s, 1),
@@ -176,7 +176,7 @@ def extract_error_entry(validation: dict, task: str) -> Optional[dict]:
     if validation.get("valid") and not validation.get("truncated"):
         return None
 
-    entry = {"task_summary": task[:100]}
+    entry = {"task_summary": task[:1000]}
     issues = validation.get("issues", [])
     if issues:
         entry["issues"] = issues[:5]

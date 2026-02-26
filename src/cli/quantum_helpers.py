@@ -83,42 +83,32 @@ def create_client_from_config(
     """
     bearer_token = config.get("bearer_token")
     cookies = config.get("cookies")
-    api_key = os.getenv("DEEPSEEK_API_KEY") or config.get("api_key")
     wasm_path = config.get("wasm_path", os.path.join(APPDATA_DIR, "sha3_wasm_bg.wasm"))
     skills_dir = config.get("skills_dir", SKILLS_DIR)
 
+    if not (bearer_token and cookies):
+        raise ValueError("No se encontraron credenciales web. Ejecuta /login.")
+
     suffix = f" [{label}]" if label else ""
 
-    if bearer_token and cookies:
-        # Auto-descargar WASM si falta
-        if not os.path.exists(wasm_path):
-            print(f"  Descargando WASM{suffix}...", file=sys.stderr)
-            from deepseek_code.auth.web_login import _download_wasm
-            if not _download_wasm(wasm_path):
-                raise FileNotFoundError("No se pudo descargar el WASM.")
-        print(f"  Cliente web{suffix} creado", file=sys.stderr)
-        return DeepSeekCodeClient(
-            bearer_token=bearer_token,
-            cookies=cookies,
-            wasm_path=wasm_path,
-            mcp_server=mcp_server,
-            memory_path=config.get("memory_path"),
-            summary_threshold=config.get("summary_threshold", 80),
-            skills_dir=skills_dir,
-            config=config,
-        )
-    elif api_key:
-        print(f"  Cliente API{suffix} creado", file=sys.stderr)
-        return DeepSeekCodeClient(
-            api_key=api_key,
-            mcp_server=mcp_server,
-            memory_path=config.get("memory_path"),
-            summary_threshold=config.get("summary_threshold", 80),
-            skills_dir=skills_dir,
-            config=config,
-        )
-    else:
-        raise ValueError("No se encontraron credenciales para crear cliente quantum.")
+    # Auto-descargar WASM si falta
+    if not os.path.exists(wasm_path):
+        print(f"  Descargando WASM{suffix}...", file=sys.stderr)
+        from deepseek_code.auth.web_login import _download_wasm
+        if not _download_wasm(wasm_path):
+            raise FileNotFoundError("No se pudo descargar el WASM.")
+
+    print(f"  Cliente web{suffix} creado", file=sys.stderr)
+    return DeepSeekCodeClient(
+        bearer_token=bearer_token,
+        cookies=cookies,
+        wasm_path=wasm_path,
+        mcp_server=mcp_server,
+        memory_path=config.get("memory_path"),
+        summary_threshold=config.get("summary_threshold", 80),
+        skills_dir=skills_dir,
+        config=config,
+    )
 
 
 def create_pool_clients(

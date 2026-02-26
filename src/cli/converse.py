@@ -129,7 +129,7 @@ def _run_converse_inner(
         global_post_delegation, get_injected_skill_names, detect_project_name,
     )
 
-    task_summary = " ".join(messages[:2])[:500]
+    task_summary = " ".join(messages[:2])[:5000]
     skills_dir = config.get("skills_dir", SKILLS_DIR)
 
     orchestrator = SessionOrchestrator(
@@ -180,7 +180,7 @@ def _run_converse_inner(
     for i, msg in enumerate(messages):
         turn_start = time.time()
         print(
-            f"[converse] Turno {i + 1}/{len(messages)}: {msg[:80]}...",
+            f"[converse] Turno {i + 1}/{len(messages)}: {msg[:300]}...",
             file=sys.stderr,
         )
 

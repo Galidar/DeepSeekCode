@@ -215,7 +215,7 @@ def _parse_paragraph_requirements(content: str) -> List[Requirement]:
             continue
         requirements.append(Requirement(
             id=f"req_{i}",
-            description=text[:500],
+            description=text[:5000],
             priority=_detect_priority(text),
             type=_detect_type(text),
         ))
@@ -258,7 +258,7 @@ def _resolve_dependency_names(requirements: List[Requirement]):
     """Resuelve dependencias por nombre a IDs."""
     name_to_id = {}
     for req in requirements:
-        name_to_id[req.description.lower()[:50]] = req.id
+        name_to_id[req.description.lower()[:200]] = req.id
         # Tambien mapear numeros ("feature 1" -> req_1)
         num_match = re.search(r"\d+", req.id)
         if num_match:

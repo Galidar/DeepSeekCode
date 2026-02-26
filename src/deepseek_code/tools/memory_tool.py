@@ -192,12 +192,12 @@ class MemoryTool(BaseTool):
                 matches.append((i + 1, context))
 
         if matches:
-            shown = matches[:30]
+            shown = matches[:100]
             result = f"**{len(matches)} coincidencia(s) para '{search_query}':**\n\n"
             for line_num, context in shown:
                 result += f"Linea {line_num}:\n```\n{context}\n```\n\n"
-            if len(matches) > 30:
-                result += f"... y {len(matches) - 30} mas."
+            if len(matches) > 100:
+                result += f"... y {len(matches) - 100} mas."
             return result
         return f"No se encontro '{search_query}' en la memoria."
 

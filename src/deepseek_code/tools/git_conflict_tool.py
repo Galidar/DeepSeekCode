@@ -110,9 +110,9 @@ class ResolveConflictsTool(BaseTool):
             previews.append({
                 "file": c.file_path,
                 "index": c.conflict_index,
-                "ours_preview": c.ours[:300],
-                "theirs_preview": c.theirs[:300],
-                "context_before": c.context_before[:200],
+                "ours_preview": c.ours[:3000],
+                "theirs_preview": c.theirs[:3000],
+                "context_before": c.context_before[:2000],
             })
 
         return {

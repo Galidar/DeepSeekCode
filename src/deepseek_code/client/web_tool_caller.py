@@ -25,39 +25,46 @@ def build_tools_prompt(tools: List[Dict]) -> str:
         "REGLA CRITICA: DEBES usar herramientas para CUALQUIER pregunta que pueda responderse",
         "consultando el sistema. NUNCA describas lo que podrias hacer — HAZLO con herramientas.",
         "",
-        "FORMATO: Para invocar una herramienta, incluye este bloque en tu respuesta:",
+        "FORMATO: Para invocar herramientas, usa UN bloque tool_call con un array JSON:",
         "```tool_call",
-        '{"tool": "nombre", "args": {"param": "valor"}}',
+        '[{"tool": "nombre", "args": {"param": "valor"}}]',
+        "```",
+        "",
+        "Para MULTIPLES herramientas en una respuesta (recomendado — mas eficiente):",
+        "```tool_call",
+        "[",
+        '  {"tool": "herramienta1", "args": {"param": "valor"}},',
+        '  {"tool": "herramienta2", "args": {"param": "valor"}}',
+        "]",
         "```",
         "",
         "REGLAS:",
-        "1. Usa UN solo bloque tool_call por herramienta. NO repitas el mismo bloque.",
+        "1. Usa UN solo bloque ```tool_call``` por respuesta con TODAS las herramientas dentro.",
         "2. Despues de recibir el resultado, RESUME la informacion en texto natural.",
         "   NUNCA copies el JSON crudo en tu respuesta. Sintetiza los datos relevantes.",
         "3. SOLO responde sin tool_call si es una pregunta puramente conversacional.",
-        "4. Maximo 2 herramientas diferentes por respuesta. Se preciso.",
+        "4. Puedes usar hasta 8 herramientas por bloque. Puedes repetir la misma (ej: multiples write_file).",
         "5. Para write_file con archivos grandes, escribe TODO el contenido en UNA sola llamada.",
         "",
         "EJEMPLOS de cuando DEBES usar herramientas:",
         "",
         "Usuario: 'lista mis archivos' →",
         "```tool_call",
-        '{"tool": "list_directory", "args": {"path": "' + desktop_escaped + '"}}',
+        '[{"tool": "list_directory", "args": {"path": "' + desktop_escaped + '"}}]',
         "```",
         "",
         "Usuario: 'que hora es' →",
         "```tool_call",
-        '{"tool": "run_command", "args": {"command": "powershell Get-Date"}}',
+        '[{"tool": "run_command", "args": {"command": "powershell Get-Date"}}]',
         "```",
         "",
-        "Usuario: 'que sistema tengo' →",
+        "Usuario: 'crea un proyecto con 3 archivos' → (multiples herramientas en un bloque)",
         "```tool_call",
-        '{"tool": "run_command", "args": {"command": "systeminfo"}}',
-        "```",
-        "",
-        "Usuario: 'crea un archivo test.txt' →",
-        "```tool_call",
-        '{"tool": "write_file", "args": {"path": "' + desktop_escaped + '\\\\test.txt", "content": "Hola mundo"}}',
+        "[",
+        '  {"tool": "write_file", "args": {"path": "' + desktop_escaped + '\\\\proyecto\\\\index.html", "content": "..."}},',
+        '  {"tool": "write_file", "args": {"path": "' + desktop_escaped + '\\\\proyecto\\\\style.css", "content": "..."}},',
+        '  {"tool": "write_file", "args": {"path": "' + desktop_escaped + '\\\\proyecto\\\\app.js", "content": "..."}}',
+        "]",
         "```",
         ""
     ]
@@ -104,10 +111,10 @@ def build_web_prompt(system_message: str, conversation: List[Dict], tools_prompt
     if tools_prompt:
         parts.append(tools_prompt)
 
-    # Agregar historial (limitar a ultimos 20 mensajes para no exceder)
+    # Agregar historial (limitar a ultimos 100 mensajes — 1M contexto lo permite)
     recent = [m for m in conversation if m.get("role") != "system"]
-    if len(recent) > 20:
-        recent = recent[-20:]
+    if len(recent) > 100:
+        recent = recent[-100:]
 
     for msg in recent:
         role = msg.get("role", "")
@@ -143,14 +150,23 @@ def extract_tool_calls(response: str) -> Tuple[List[Dict], str]:
     pattern = r'```tool_call\s*\n(.*?)\n```'
     matches = re.findall(pattern, response, re.DOTALL)
 
+    def _append_call(item):
+        """Extrae tool+args de un dict y lo agrega a raw_calls."""
+        if isinstance(item, dict) and "tool" in item:
+            raw_calls.append({
+                "tool": item["tool"],
+                "args": item.get("args", item.get("arguments", {}))
+            })
+
     for match in matches:
         try:
             data = json.loads(match.strip())
-            if "tool" in data:
-                raw_calls.append({
-                    "tool": data["tool"],
-                    "args": data.get("args", data.get("arguments", {}))
-                })
+            if isinstance(data, list):
+                # Array de tool calls: [{tool:..., args:...}, ...]
+                for item in data:
+                    _append_call(item)
+            else:
+                _append_call(data)
         except json.JSONDecodeError:
             # Intentar extraer JSON parcial
             try:
@@ -158,11 +174,7 @@ def extract_tool_calls(response: str) -> Tuple[List[Dict], str]:
                 json_match = re.search(r'\{.*\}', match, re.DOTALL)
                 if json_match:
                     data = json.loads(json_match.group())
-                    if "tool" in data:
-                        raw_calls.append({
-                            "tool": data["tool"],
-                            "args": data.get("args", data.get("arguments", {}))
-                        })
+                    _append_call(data)
             except (json.JSONDecodeError, AttributeError):
                 pass
 
@@ -191,9 +203,9 @@ def format_tool_result(tool_name: str, result) -> str:
     else:
         result_str = str(result)
 
-    # Truncar resultados muy largos
-    if len(result_str) > 3000:
-        result_str = result_str[:3000] + "\n... [resultado truncado, usa read_file con max_lines para ver mas]"
+    # Truncar resultados extremadamente largos (120K chars ~ 30K tokens, ~3% del contexto 1M)
+    if len(result_str) > 120000:
+        result_str = result_str[:120000] + "\n... [resultado truncado, usa read_file con max_lines para ver mas]"
 
     return f"Resultado de `{tool_name}`:\n```\n{result_str}\n```"
 
@@ -250,7 +262,7 @@ def clean_final_response(response: str) -> str:
 
 
 async def run_agent_web(web_session, mcp_server, system_prompt: str,
-                        user_message: str, tools: list, max_steps: int = 10) -> str:
+                        user_message: str, tools: list, max_steps: int = 50) -> str:
     """Ejecuta un paso de agente en modo web con tool calling simulado.
 
     Historial independiente del chat principal. Usado por AgentEngine.

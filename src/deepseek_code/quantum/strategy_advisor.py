@@ -162,7 +162,7 @@ async def recommend_strategy_ai(
     task: str,
     template_info: str = "",
     project_info: str = "",
-    timeout_s: float = 10.0,
+    timeout_s: float = 30.0,
 ) -> StrategyRecommendation:
     """Recomendacion via DeepSeek (usa tokens pero es mas inteligente).
 

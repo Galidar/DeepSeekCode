@@ -214,7 +214,7 @@ def _identify_error_clusters(error_log: list) -> List[ErrorCluster]:
         if len(type_counts[etype]["examples"]) < 3:
             desc = entry.get("description", entry.get("message", ""))
             if desc:
-                type_counts[etype]["examples"].append(desc[:100])
+                type_counts[etype]["examples"].append(desc[:500])
 
     # Contar recientes (ultimos 10 registros)
     recent = error_log[-10:] if len(error_log) > 10 else error_log

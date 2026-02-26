@@ -77,9 +77,10 @@ def get_max_tokens(
     Returns:
         max_tokens para pasar a la API
     """
-    default = MAX_TOKENS_MAP.get(task_level, 4096)
+    default = MAX_TOKENS_MAP.get(task_level, 8192)
     if config_max and config_max > 0:
-        return min(default, config_max)
+        # config_max es un piso, no un techo — nunca reducir los defaults adaptativos
+        return max(default, config_max)
     return default
 
 

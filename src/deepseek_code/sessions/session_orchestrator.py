@@ -168,7 +168,14 @@ class SessionOrchestrator:
 
         try:
             from ..skills.skill_injector import detect_relevant_skills, load_skill_contents
-            relevant = detect_relevant_skills(task_text, max_skills=5)
+            from ..client.task_classifier import classify_task, TaskLevel
+
+            # Respetar clasificacion: no inyectar skills para chat/simple
+            level = classify_task(task_text)
+            if level <= TaskLevel.SIMPLE:
+                return []
+            max_sk = 2 if level == TaskLevel.CODE_SIMPLE else 5
+            relevant = detect_relevant_skills(task_text, max_skills=max_sk)
             if not relevant:
                 return []
 

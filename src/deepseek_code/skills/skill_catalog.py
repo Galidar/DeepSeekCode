@@ -33,10 +33,10 @@ def _build_entries(skills_dir: str) -> Dict[str, str]:
     for name, skill in sorted(all_skills.items()):
         if isinstance(skill, KnowledgeSkill):
             desc = skill.description or "(knowledge skill)"
-            entries[name] = desc.strip().replace("\n", " ")[:120]
+            entries[name] = desc.strip().replace("\n", " ")[:500]
         elif isinstance(skill, SkillDefinition):
             desc = skill.description or "(workflow)"
-            entries[name] = f"[workflow] {desc.strip()[:100]}"
+            entries[name] = f"[workflow] {desc.strip()[:500]}"
 
     return entries
 

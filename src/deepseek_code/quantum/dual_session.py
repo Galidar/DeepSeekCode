@@ -80,7 +80,7 @@ class DualSession:
         system_a: str,
         prompt_b: str,
         system_b: str,
-        max_steps: int = 10,
+        max_steps: int = 50,
     ) -> DualResult:
         """Ejecuta dos chat_with_system() en paralelo.
 
@@ -149,7 +149,7 @@ class DualSession:
         prompt: str,
         system_prompt: str,
         context_from_a: str = "",
-        max_steps: int = 10,
+        max_steps: int = 50,
     ) -> str:
         """Fallback secuencial: usa cliente A con contexto del intento previo.
 
@@ -169,9 +169,9 @@ class DualSession:
 
         enriched_system = system_prompt
         if context_from_a:
-            # Limitar contexto a 6000 chars para no saturar
-            ctx = context_from_a[:6000]
-            if len(context_from_a) > 6000:
+            # Limitar contexto (1M context → budget generoso)
+            ctx = context_from_a[:60000]
+            if len(context_from_a) > 60000:
                 ctx += "\n\n[... respuesta anterior truncada ...]"
             enriched_system += (
                 f"\n\n== CONTEXTO DE INTENTO PREVIO ==\n"
