@@ -16,6 +16,41 @@ from cli.oneshot_helpers import (
 )
 
 
+class _TeeStderr:
+    """Duplica stderr a un archivo de log para monitoreo en tiempo real.
+
+    Todas las llamadas print(..., file=sys.stderr) van a AMBOS:
+    stderr original (para CLI) y archivo de log (para monitoreo externo).
+    """
+
+    def __init__(self, original, log_path: str):
+        self.original = original
+        self.log = open(log_path, 'w', encoding='utf-8')
+
+    def write(self, data):
+        self.original.write(data)
+        self.log.write(data)
+        self.log.flush()
+
+    def flush(self):
+        self.original.flush()
+        self.log.flush()
+
+    def fileno(self):
+        return self.original.fileno()
+
+    def reconfigure(self, **kwargs):
+        if hasattr(self.original, 'reconfigure'):
+            self.original.reconfigure(**kwargs)
+
+    def close_log(self):
+        """Cierra el archivo de log y restaura stderr."""
+        try:
+            self.log.close()
+        except Exception:
+            pass
+
+
 def run_oneshot(query: str, json_mode: bool = False, config_path: str = None):
     """Consulta unica. Alimenta SurgicalMemory + GlobalMemory standalone."""
     originals = None
@@ -89,6 +124,12 @@ def run_agent_oneshot(goal: str, json_mode: bool = False, config_path: str = Non
     En modo texto, stdout contiene el resumen final.
     Alimenta SurgicalMemory + GlobalMemory incluso sin Claude.
     """
+    # --- Real-time log: duplicar stderr a agent_debug.log ---
+    let_log_path = os.path.join(os.getcwd(), "agent_debug.log")
+    let_tee = _TeeStderr(sys.stderr, let_log_path)
+    sys.stderr = let_tee
+    print(f"[agent] Log en tiempo real: {let_log_path}", file=sys.stderr)
+
     originals = None
     if json_mode:
         originals = redirect_output()
@@ -164,6 +205,11 @@ def run_agent_oneshot(goal: str, json_mode: bool = False, config_path: str = Non
     finally:
         if originals:
             restore_output(*originals)
+        # Restaurar stderr original
+        if isinstance(sys.stderr, _TeeStderr):
+            let_tee_ref = sys.stderr
+            sys.stderr = let_tee_ref.original
+            let_tee_ref.close_log()
 
 
 def run_delegate_oneshot(
