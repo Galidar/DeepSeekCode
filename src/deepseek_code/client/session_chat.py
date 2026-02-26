@@ -24,7 +24,7 @@ import time
 from typing import Optional, List, Dict
 
 from ..sessions.session_store import SessionStore, ChatSession
-from .web_session import DeepSeekWebSession, TokenExpiredError
+from .web_session import DeepSeekWebSession, TokenExpiredError, StallDetectedError
 from .web_tool_caller import (
     build_tools_prompt, extract_tool_calls,
     format_tool_result, clean_final_response,
@@ -152,6 +152,9 @@ async def chat_in_session(
             )
         except TokenExpiredError as e:
             return f"[Error de sesion] {e}. Ejecuta /login para renovar."
+        except StallDetectedError as e:
+            print(f"  [session] STALL detectado: {e}", file=sys.stderr)
+            return f"[Error] DeepSeek se congelo. Reintentos agotados. Ejecuta el comando de nuevo."
 
         init_msg_id = web_session.last_message_id
         store.update(session_name, parent_message_id=init_msg_id)
@@ -231,6 +234,9 @@ async def chat_in_session(
             )
         except TokenExpiredError as e:
             return f"[Error de sesion] {e}. Ejecuta /login para renovar."
+        except StallDetectedError as e:
+            print(f"  [session] STALL detectado: {e}", file=sys.stderr)
+            return f"[Error] DeepSeek se congelo. Reintentos agotados. Ejecuta el comando de nuevo."
 
         # Capture message_id for continuity
         msg_id = web_session.last_message_id

@@ -11,6 +11,20 @@ from .prompts import AGENT_SYSTEM_PROMPT, build_step_prompt
 from .logger import AgentLogger
 
 
+def _build_continuation_prompt(goal: str, step_num: int) -> str:
+    """Prompt ligero para steps de continuacion.
+
+    Cuando la sesion se mantiene via parent_message_id, DeepSeek ya tiene
+    todo el contexto de pasos anteriores. No necesitamos re-enviar resúmenes.
+    """
+    return (
+        f"PASO {step_num} — Continua con la META: {goal}\n\n"
+        f"Basandote en todo lo que ya hiciste en pasos anteriores, "
+        f"decide que hacer ahora. Si ya completaste la meta, "
+        f"incluye COMPLETADO en tu respuesta con un resumen final."
+    )
+
+
 class AgentStatus(Enum):
     PLANNING = "planificando"
     EXECUTING = "ejecutando"
@@ -67,6 +81,7 @@ class AgentEngine:
         self._interrupted = False
         self._steps: List[AgentStep] = []
         self._results: List[str] = []
+        self._continue_parent_id: Optional[int] = None  # Session continuation
 
         # Logger
         self.logger = AgentLogger(logs_dir) if logs_dir else None
@@ -76,13 +91,16 @@ class AgentEngine:
         self._interrupted = True
 
     async def run(self, goal: str) -> AgentResult:
-        """Ejecuta el agente con la meta dada."""
+        """Ejecuta el agente con la meta dada.
+
+        Mantiene UNA sola sesion DeepSeek web a traves de todos los steps
+        via continue_parent_id. Phase 1 solo se ejecuta en el step 1.
+        """
         start_time = time.time()
         self._interrupted = False
         self._steps = []
         self._results = []
-
-        # El agente funciona en ambos modos (API y web con tool calling simulado)
+        self._continue_parent_id = None
 
         # Notificar inicio
         await self._notify_status(AgentStatus.PLANNING)
@@ -95,8 +113,11 @@ class AgentEngine:
 
             await self._notify_status(AgentStatus.EXECUTING)
 
-            # Construir prompt para este paso
-            step_prompt = build_step_prompt(goal, step_num, self._results)
+            # Construir prompt: paso 1 = completo, paso N = ligero (DeepSeek ya tiene contexto)
+            if self._continue_parent_id is None:
+                step_prompt = build_step_prompt(goal, step_num, self._results)
+            else:
+                step_prompt = _build_continuation_prompt(goal, step_num)
 
             # Ejecutar paso
             step_start = time.time()
@@ -104,12 +125,19 @@ class AgentEngine:
                 response = await self.client.chat_with_system(
                     user_message=step_prompt,
                     system_prompt=AGENT_SYSTEM_PROMPT,
-                    max_steps=50  # Permitir hasta 50 tool calls por paso
+                    max_steps=50,
+                    continue_parent_id=self._continue_parent_id,
                 )
             except Exception as e:
                 return self._finalize(goal, AgentStatus.FAILED,
                                       f"Error en paso {step_num}: {e}", start_time,
                                       error=str(e))
+
+            # Capturar parent_id para continuacion del siguiente step
+            if hasattr(self.client, 'web_session') and self.client.web_session:
+                self._continue_parent_id = getattr(
+                    self.client.web_session, 'last_message_id', None
+                )
 
             step_duration = int((time.time() - step_start) * 1000)
 

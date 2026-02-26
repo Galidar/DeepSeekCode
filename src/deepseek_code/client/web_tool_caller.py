@@ -262,48 +262,66 @@ def clean_final_response(response: str) -> str:
 
 
 async def run_agent_web(web_session, mcp_server, system_prompt: str,
-                        user_message: str, tools: list, max_steps: int = 50) -> str:
+                        user_message: str, tools: list, max_steps: int = 50,
+                        continue_parent_id: int = None) -> str:
     """Ejecuta un paso de agente en modo web con tool calling simulado.
 
     Usa Phase 1 (identidad + herramientas) con message chaining via parent_message_id.
     DeepSeek PRIMERO confirma su identidad con "DEEPSEEK CODE ACTIVADO" y solo
     DESPUES recibe el mensaje del usuario.
 
-    Flow:
+    Flow (primera llamada):
     1. Phase 1: system_prompt + tools → "DEEPSEEK CODE ACTIVADO"
     2. User message (chained via parent_id)
     3. Tool loop: response → extract tools → execute → send results (chained)
+
+    Flow (continuacion — continue_parent_id proporcionado):
+    1. Skip Phase 1 (ya establecida en la sesion existente)
+    2. User message (chained via continue_parent_id)
+    3. Tool loop (igual)
 
     Usado por AgentEngine y _chat_with_system_web().
     """
     import asyncio
     import sys
     from ..server.protocol import MCPRequest, MCPMethod
-    from .web_session import TokenExpiredError
+    from .web_session import TokenExpiredError, StallDetectedError
 
-    # --- Crear sesion fresca para este agente ---
-    let_chat_session_id = web_session.create_chat_session()
-    web_session._chat_session_id = let_chat_session_id
+    if continue_parent_id is not None:
+        # --- Continuacion: reusar sesion existente, saltar Phase 1 ---
+        let_parent_id = continue_parent_id
+        print(f"  [agente] Continuando sesion (parent_id={let_parent_id})", file=sys.stderr)
+    else:
+        # --- Crear sesion fresca para este agente ---
+        let_chat_session_id = web_session.create_chat_session()
+        web_session._chat_session_id = let_chat_session_id
 
-    # --- Phase 1: Identidad + herramientas → "DEEPSEEK CODE ACTIVADO" ---
-    tools_prompt = build_tools_prompt(tools) if tools else ""
-    init_prompt = system_prompt + tools_prompt + (
-        "\n\nResponde UNICAMENTE 'DEEPSEEK CODE ACTIVADO' para confirmar "
-        "que entendiste tu identidad y herramientas."
-    )
-
-    print(f"  [agente] Phase 1: Enviando identidad + herramientas...", file=sys.stderr)
-    try:
-        _init_response = await asyncio.get_event_loop().run_in_executor(
-            None, web_session.chat, init_prompt, True, None,
+        # --- Phase 1: Identidad + herramientas → "DEEPSEEK CODE ACTIVADO" ---
+        tools_prompt = build_tools_prompt(tools) if tools else ""
+        init_prompt = system_prompt + tools_prompt + (
+            "\n\nResponde UNICAMENTE 'DEEPSEEK CODE ACTIVADO' para confirmar "
+            "que entendiste tu identidad y herramientas."
         )
-    except TokenExpiredError as e:
-        return f"[Error de sesion] {e}. Ejecuta /login para renovar."
 
-    let_parent_id = web_session.last_message_id
-    print(f"  [agente] Phase 1: DeepSeek confirmo identidad (parent_id={let_parent_id})", file=sys.stderr)
+        print(f"  [agente] Phase 1: Enviando identidad + herramientas...", file=sys.stderr)
+        try:
+            _init_response = await asyncio.get_event_loop().run_in_executor(
+                None, web_session.chat, init_prompt, True, None,
+            )
+        except TokenExpiredError as e:
+            return f"[Error de sesion] {e}. Ejecuta /login para renovar."
+        except StallDetectedError as e:
+            print(f"  [agente] STALL en Phase 1: {e}", file=sys.stderr)
+            return (
+                "[Error] DeepSeek se congelo durante Phase 1 (identidad). "
+                "Los reintentos automaticos se agotaron. "
+                "Ejecuta el comando de nuevo."
+            )
 
-    # --- Phase 3: User message + tool loop (chained via parent_id) ---
+        let_parent_id = web_session.last_message_id
+        print(f"  [agente] Phase 1: DeepSeek confirmo identidad (parent_id={let_parent_id})", file=sys.stderr)
+
+    # --- User message + tool loop (chained via parent_id) ---
     prompt = user_message
 
     for step in range(max_steps):
@@ -313,6 +331,16 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
             )
         except TokenExpiredError as e:
             return f"[Error de sesion] {e}. Ejecuta /login para renovar."
+        except StallDetectedError as e:
+            print(
+                f"  [agente] STALL en iter={step+1}: {e}",
+                file=sys.stderr,
+            )
+            return (
+                f"[Error] DeepSeek se congelo en la iteracion {step+1}. "
+                f"Los reintentos automaticos se agotaron. "
+                f"Ejecuta el comando de nuevo."
+            )
 
         # Capturar message_id para continuidad
         let_parent_id = web_session.last_message_id

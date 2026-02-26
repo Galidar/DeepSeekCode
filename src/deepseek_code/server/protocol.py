@@ -110,7 +110,17 @@ class MCPServer:
             )
 
         tool = self.tools[tool_name]
-        result = await tool.execute(**arguments)
+
+        # Filtrar parametros que DeepSeek alucinó y no estan en el schema
+        # Esto evita TypeError por kwargs inesperados
+        schema_props = tool.input_schema.get("properties", {})
+        filtered_args = {k: v for k, v in arguments.items() if k in schema_props}
+        if len(filtered_args) < len(arguments):
+            dropped = set(arguments) - set(filtered_args)
+            import sys
+            print(f"  [protocol] {tool_name}: parametros ignorados {dropped}", file=sys.stderr)
+
+        result = await tool.execute(**filtered_args)
         return MCPResponse(id=request.id, result={"content": result})
 
     async def _handle_resources_list(self, request: MCPRequest) -> MCPResponse:

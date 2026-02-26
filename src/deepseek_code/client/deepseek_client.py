@@ -244,12 +244,21 @@ class DeepSeekCodeClient:
         else:
             return await self._chat_web(max_steps)
 
-    async def chat_with_system(self, user_message: str, system_prompt: str, max_steps: int = 50) -> str:
-        """Chat con system prompt personalizado (para agentes). Historial independiente."""
+    async def chat_with_system(self, user_message: str, system_prompt: str,
+                               max_steps: int = 50, continue_parent_id: int = None) -> str:
+        """Chat con system prompt personalizado (para agentes). Historial independiente.
+
+        Args:
+            continue_parent_id: Si se provee, continua una sesion existente
+                               sin repetir Phase 1. Usado por AgentEngine para
+                               mantener contexto entre pasos.
+        """
         if self.mode == "api":
             return await self._chat_with_system_api(user_message, system_prompt, max_steps)
         else:
-            return await self._chat_with_system_web(user_message, system_prompt, max_steps)
+            return await self._chat_with_system_web(
+                user_message, system_prompt, max_steps, continue_parent_id
+            )
 
     async def chat_in_session(self, session_name: str, user_message: str,
                                system_prompt: str = None, max_steps: int = 50,
@@ -330,13 +339,19 @@ class DeepSeekCodeClient:
 
         return "Se alcanzo el numero maximo de iteraciones."
 
-    async def _chat_with_system_web(self, user_message: str, system_prompt: str, max_steps: int) -> str:
-        """chat_with_system en modo web (delega a run_agent_web)."""
+    async def _chat_with_system_web(self, user_message: str, system_prompt: str,
+                                    max_steps: int, continue_parent_id: int = None) -> str:
+        """chat_with_system en modo web (delega a run_agent_web).
+
+        Si continue_parent_id se provee, continua la sesion existente
+        sin crear nueva sesion ni repetir Phase 1.
+        """
         from .web_tool_caller import run_agent_web
         tools = await self._get_tools()
         return await run_agent_web(
             self.web_session, self.mcp, system_prompt,
-            user_message, tools, max_steps
+            user_message, tools, max_steps,
+            continue_parent_id=continue_parent_id,
         )
 
     async def _chat_api(self, max_steps: int) -> str:

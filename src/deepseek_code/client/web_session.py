@@ -3,11 +3,18 @@
 import json
 import base64
 import struct
+import time
+import sys
 from pathlib import Path
 from typing import Union, Generator
 
 import requests
 import wasmtime
+
+# Timeout en segundos sin recibir NINGUN chunk SSE antes de declarar stall.
+# DeepSeek puede tardar en "pensar", pero siempre envia chunks de thinking.
+# Si pasan 90s sin NADA, la conexion murio silenciosamente.
+STALL_TIMEOUT_SECONDS = 90
 
 
 class TokenExpiredError(Exception):
@@ -17,6 +24,15 @@ class TokenExpiredError(Exception):
 
 class SessionDeadError(Exception):
     """Sesion de chat invalida o muerta. Se debe recrear."""
+    pass
+
+
+class StallDetectedError(Exception):
+    """DeepSeek dejo de enviar datos por mas de STALL_TIMEOUT_SECONDS.
+
+    Esto ocurre cuando la conexion SSE se congela silenciosamente.
+    El caller debe reintentar el mismo mensaje.
+    """
     pass
 
 
@@ -194,6 +210,10 @@ class DeepSeekWebSession:
         Args:
             parent_message_id: ID del mensaje padre para continuidad de conversacion.
                 Si es None, DeepSeek usa el ultimo mensaje de la sesion.
+
+        Raises:
+            StallDetectedError: Si no se recibe ningun chunk SSE en STALL_TIMEOUT_SECONDS.
+            TokenExpiredError: Si el bearer token expiro o es invalido.
         """
         if not chat_session_id:
             chat_session_id = self.create_chat_session()
@@ -211,82 +231,98 @@ class DeepSeekWebSession:
 
         self._last_message_id = None
 
-        with self.session.post(url, headers=headers, json=payload, stream=True) as resp:
-            if resp.status_code == 401:
-                raise TokenExpiredError("Bearer token expirado durante envio. Usa /login para renovar.")
-            if resp.status_code == 403:
-                raise TokenExpiredError("Acceso denegado durante envio. Token invalido.")
-            resp.raise_for_status()
-            last_event = ""
-            # Track whether we're in thinking or content stream.
-            # DeepSeek sends p="response/thinking_content" to start thinking,
-            # then continuation chunks with p="" until p="response/content".
-            stream_mode = "init"  # "init" -> "thinking" -> "content"
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                line_str = line.decode("utf-8", errors="replace")
+        # timeout=(connect, read) — read timeout actua como per-chunk timeout.
+        # Si no llega NINGUN dato en STALL_TIMEOUT_SECONDS, requests lanza
+        # requests.exceptions.ReadTimeout → convertimos a StallDetectedError.
+        try:
+            with self.session.post(
+                url, headers=headers, json=payload, stream=True,
+                timeout=(30, STALL_TIMEOUT_SECONDS),
+            ) as resp:
+                if resp.status_code == 401:
+                    raise TokenExpiredError("Bearer token expirado durante envio. Usa /login para renovar.")
+                if resp.status_code == 403:
+                    raise TokenExpiredError("Acceso denegado durante envio. Token invalido.")
+                resp.raise_for_status()
+                last_event = ""
+                stream_mode = "init"  # "init" -> "thinking" -> "content"
 
-                if line_str.startswith("event: "):
-                    last_event = line_str[7:].strip()
-                    if last_event == "finish":
-                        break
-                    continue
-
-                if line_str.startswith("data: "):
-                    raw = line_str[6:]
-                    if raw == "[DONE]" or raw == "{}":
+                for line in resp.iter_lines():
+                    if not line:
                         continue
-                    try:
-                        chunk = json.loads(raw)
-                    except json.JSONDecodeError:
+                    line_str = line.decode("utf-8", errors="replace")
+
+                    if line_str.startswith("event: "):
+                        last_event = line_str[7:].strip()
+                        if last_event == "finish":
+                            break
                         continue
 
-                    # Capturar response_message_id del chunk metadata inicial
-                    # DeepSeek envia: {"request_message_id": 1, "response_message_id": 2}
-                    if "response_message_id" in chunk:
-                        self._last_message_id = chunk["response_message_id"]
+                    if line_str.startswith("data: "):
+                        raw = line_str[6:]
+                        if raw == "[DONE]" or raw == "{}":
+                            continue
+                        try:
+                            chunk = json.loads(raw)
+                        except json.JSONDecodeError:
+                            continue
 
-                    if "v" not in chunk:
-                        continue
+                        # Capturar response_message_id del chunk metadata inicial
+                        if "response_message_id" in chunk:
+                            self._last_message_id = chunk["response_message_id"]
 
-                    path = chunk.get("p", "")
-                    val = chunk["v"]
+                        if "v" not in chunk:
+                            continue
 
-                    # Capturar message_id del objeto response inicial
-                    # DeepSeek envia: {"v": {"response": {"message_id": 2, ...}}}
-                    if isinstance(val, dict) and "response" in val:
-                        resp_obj = val["response"]
-                        if isinstance(resp_obj, dict) and "message_id" in resp_obj:
-                            self._last_message_id = resp_obj["message_id"]
-                        continue
+                        path = chunk.get("p", "")
+                        val = chunk["v"]
 
-                    # Track stream mode transitions
-                    if path == "response/thinking_content":
-                        stream_mode = "thinking"
-                        continue
-                    if path == "response/content":
-                        stream_mode = "content"
-                        # This chunk starts content — yield it
+                        # Capturar message_id del objeto response inicial
+                        if isinstance(val, dict) and "response" in val:
+                            resp_obj = val["response"]
+                            if isinstance(resp_obj, dict) and "message_id" in resp_obj:
+                                self._last_message_id = resp_obj["message_id"]
+                            continue
+
+                        # Track stream mode transitions
+                        if path == "response/thinking_content":
+                            stream_mode = "thinking"
+                            continue
+                        if path == "response/content":
+                            stream_mode = "content"
+                            if isinstance(val, str):
+                                yield val
+                            continue
+
+                        # Ignore all other non-empty paths
+                        if path:
+                            continue
+
+                        # For p="" chunks, only yield if we're in content mode
+                        if stream_mode != "content":
+                            continue
+
+                        # Extraer texto de respuesta
                         if isinstance(val, str):
                             yield val
-                        continue
+                        elif isinstance(val, dict):
+                            content = val.get("content", "")
+                            if content:
+                                yield content
 
-                    # Ignore all other non-empty paths
-                    if path:
-                        continue
-
-                    # For p="" chunks, only yield if we're in content mode
-                    if stream_mode != "content":
-                        continue
-
-                    # Extraer texto de respuesta
-                    if isinstance(val, str):
-                        yield val
-                    elif isinstance(val, dict):
-                        content = val.get("content", "")
-                        if content:
-                            yield content
+        except requests.exceptions.ReadTimeout:
+            print(
+                f"  [STALL] DeepSeek no envio datos en {STALL_TIMEOUT_SECONDS}s. "
+                f"Conexion congelada detectada.",
+                file=sys.stderr,
+            )
+            raise StallDetectedError(
+                f"DeepSeek dejo de responder por {STALL_TIMEOUT_SECONDS}s. "
+                f"La conexion SSE se congelo silenciosamente."
+            )
+        except requests.exceptions.ConnectionError as e:
+            print(f"  [STALL] Conexion perdida: {e}", file=sys.stderr)
+            raise StallDetectedError(f"Conexion perdida durante streaming: {e}")
 
     def _chat_internal(self, message: str, thinking_enabled: bool = False,
                        parent_message_id=None) -> str:
@@ -307,16 +343,44 @@ class DeepSeekWebSession:
         return full_response
 
     def chat(self, message: str, thinking_enabled: bool = False,
-             parent_message_id=None) -> str:
-        """Metodo de alto nivel con auto-recovery de sesion muerta."""
-        try:
-            return self._chat_internal(message, thinking_enabled, parent_message_id)
-        except (SessionDeadError, RuntimeError) as e:
-            err_msg = str(e).lower()
-            if "session" in err_msg or "chat_session" in err_msg:
-                self._chat_session_id = self.create_chat_session()
+             parent_message_id=None, max_stall_retries: int = 3) -> str:
+        """Metodo de alto nivel con auto-recovery de sesion muerta y stall detection.
+
+        Si DeepSeek se congela (StallDetectedError), reintenta automaticamente
+        hasta max_stall_retries veces con la misma sesion y parent_message_id.
+        """
+        let_attempts = 0
+        let_last_error = None
+
+        while let_attempts <= max_stall_retries:
+            try:
                 return self._chat_internal(message, thinking_enabled, parent_message_id)
-            raise
+            except StallDetectedError as e:
+                let_attempts += 1
+                let_last_error = e
+                if let_attempts <= max_stall_retries:
+                    print(
+                        f"  [STALL] Reintentando ({let_attempts}/{max_stall_retries})...",
+                        file=sys.stderr,
+                    )
+                    # Crear nueva sesion de chat para el retry
+                    # (la anterior puede estar corrupta)
+                    self._chat_session_id = self.create_chat_session()
+                else:
+                    print(
+                        f"  [STALL] Agotados {max_stall_retries} reintentos. "
+                        f"DeepSeek no responde.",
+                        file=sys.stderr,
+                    )
+                    raise
+            except (SessionDeadError, RuntimeError) as e:
+                err_msg = str(e).lower()
+                if "session" in err_msg or "chat_session" in err_msg:
+                    self._chat_session_id = self.create_chat_session()
+                    return self._chat_internal(message, thinking_enabled, parent_message_id)
+                raise
+
+        raise let_last_error
 
     @property
     def last_message_id(self) -> str:
