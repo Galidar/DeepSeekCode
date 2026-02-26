@@ -1,7 +1,7 @@
 {
   "name": "deepseek-code",
-  "version": "4.0.0",
-  "description": "Complete multi-agent AI system with identity-aware adaptive prompts, hybrid TF-IDF + keyword skill detection, Session Orchestrator 3-phase protocol, Knowledge Transfer, Token-Efficient Pipeline, Semantic Engine, and Intelligence Package. v4.0 adds system identity block, hybrid scoring for skill detection quality (eliminates false positives), adaptive prompts per task level, redesigned system prompts. v2.6 Phase 2 injection, cross-chat knowledge transfer, session-digest routing. Pure-Python TF-IDF, Bayesian inference, temporal decay, Mann-Kendall trends. 5 intelligence features. V3.2 auto-select model, quantum dual sessions, multi-step plans, 51 skills, 15 MCP tools.",
+  "version": "4.1.0",
+  "description": "Complete multi-agent AI system with mandatory Phase 1 identity protocol (DEEPSEEK CODE ACTIVADO), agent mode message chaining via parent_message_id, identity-aware adaptive prompts, hybrid TF-IDF + keyword skill detection, Session Orchestrator 3-phase protocol, Knowledge Transfer, Token-Efficient Pipeline, Semantic Engine, and Intelligence Package. v4.1 enforces Phase 1 identity across ALL modes (session, agent, quantum, multi), agent refactored from monolithic prompts to Phase 1 + chained messages. v4.0 system identity block, hybrid scoring, adaptive prompts. v2.6 Phase 2 injection, cross-chat knowledge transfer, session-digest routing. 5 intelligence features. 51 skills, 15 MCP tools.",
   "author": {
     "name": "Galidar"
   },
@@ -58,7 +58,9 @@
     "session-management",
     "session-orchestrator",
     "knowledge-transfer",
+    "phase1-identity",
     "phase2-injection",
+    "message-chaining",
     "auto-summary",
     "session-digest",
     "routing",

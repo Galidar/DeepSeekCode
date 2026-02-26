@@ -12,7 +12,7 @@ from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 
 APP_NAME = "DeepSeek-Code"
-APP_VERSION = "4.0.0"
+APP_VERSION = "4.1.0"
 APP_EXE = "DeepSeekCode.exe"
 UNINSTALL_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\DeepSeek-Code"
 

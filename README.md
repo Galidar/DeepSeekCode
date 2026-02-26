@@ -325,6 +325,7 @@ graph TB
 
 Key features:
 
+- **Phase 1 Identity Protocol** — DeepSeek must confirm its identity with **"DEEPSEEK CODE ACTIVADO"** before receiving any user messages, tools, or skills. Enforced in ALL modes without exception — sessions, agent, quantum, multi-runner.
 - **Phase 2 Injection** — Skills, memory, and knowledge are sent as individual tracked messages. Each session remembers what it already received — no duplication.
 - **Knowledge Transfer** — `--transfer-from "delegate:auth"` injects a compact summary of another session's decisions into a new chat. Tracked bidirectionally.
 - **Auto-Summaries** — After each exchange, local heuristics classify the activity (code/design/fix/query) and update the session's topic and summary at zero token cost.
@@ -459,7 +460,7 @@ python run.py --converse "add spatial audio" --session "audio" --json
 
 <br>
 
-**🤖 Autonomous Agent** — Give it a goal. It plans, executes tools, self-corrects, and iterates up to 100 steps autonomously.
+**🤖 Autonomous Agent** — Give it a goal. It confirms its identity first ("DEEPSEEK CODE ACTIVADO"), then plans, executes tools via message chaining (`parent_message_id`), self-corrects, and iterates up to 100 steps autonomously.
 ```bash
 > /agent build a REST API with authentication, CRUD endpoints, and tests
 ```
@@ -509,7 +510,7 @@ DeepSeek Code now adapts to the difficulty of each task automatically:
 | **Auto Model Select** | Simple questions use `deepseek-chat` (8K output). Complex code uses `deepseek-reasoner` (64K output + chain-of-thought) — selected automatically |
 | **Thinking Mode** | Web sessions can enable DeepSeek's thinking mode for deeper reasoning on code tasks |
 | **Smart Chunking** | Templates over 30K tokens are split by TODO blocks to prevent hallucination. Each chunk gets context from the previous one |
-| **Dual Sessions** | Quantum Bridge runs 2 parallel sessions with different angles. Pool infrastructure (`create_pool_clients`) available for future scaling |
+| **Dual Sessions** | Quantum Bridge runs 2 parallel sessions with different angles. All sessions enforce Phase 1 identity protocol. Pool infrastructure (`create_pool_clients`) available for future scaling |
 | **Adaptive max_tokens** | Output budget scales with task complexity: 1K for chat, 4K for simple code, 16K for delegations |
 
 All features are backward-compatible — old configs work identically without changes.
