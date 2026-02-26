@@ -323,6 +323,8 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
 
     # --- User message + tool loop (chained via parent_id) ---
     prompt = user_message
+    let_empty_retries = 0
+    let_max_empty_retries = 2
 
     for step in range(max_steps):
         try:
@@ -344,6 +346,36 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
 
         # Capturar message_id para continuidad
         let_parent_id = web_session.last_message_id
+
+        # Detectar respuesta vacia/muerta: el stream termino pero sin contenido util.
+        # chat() ya reintenta internamente, pero si llega aqui vacio, enviamos
+        # un nudge para despertar a DeepSeek.
+        if not response or not response.strip():
+            let_empty_retries += 1
+            if let_empty_retries <= let_max_empty_retries:
+                print(
+                    f"  [agente] Respuesta vacia en iter={step+1}. "
+                    f"Enviando nudge ({let_empty_retries}/{let_max_empty_retries})...",
+                    file=sys.stderr,
+                )
+                prompt = (
+                    "Tu respuesta anterior llego vacia. "
+                    "Continua con la tarea. Usa herramientas si las necesitas."
+                )
+                continue
+            else:
+                print(
+                    f"  [agente] {let_max_empty_retries} respuestas vacias consecutivas. "
+                    f"Conversacion muerta.",
+                    file=sys.stderr,
+                )
+                return (
+                    "[Error] DeepSeek dejo de responder "
+                    f"({let_max_empty_retries} respuestas vacias consecutivas). "
+                    "Ejecuta el comando de nuevo."
+                )
+        else:
+            let_empty_retries = 0  # Reset si llega una respuesta valida
 
         # Extraer tool calls
         tool_calls, clean_text = extract_tool_calls(response)

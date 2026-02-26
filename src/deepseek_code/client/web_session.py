@@ -346,15 +346,46 @@ class DeepSeekWebSession:
              parent_message_id=None, max_stall_retries: int = 3) -> str:
         """Metodo de alto nivel con auto-recovery de sesion muerta y stall detection.
 
-        Si DeepSeek se congela (StallDetectedError), reintenta automaticamente
-        hasta max_stall_retries veces con la misma sesion y parent_message_id.
+        Detecta y reintenta automaticamente:
+        - StallDetectedError: stream SSE congelado (90s sin datos)
+        - Respuesta vacia: stream termino limpiamente pero sin contenido
+          (DeepSeek penso y cerro sin generar respuesta)
+
+        Reintenta hasta max_stall_retries veces con sesion nueva.
         """
         let_attempts = 0
         let_last_error = None
 
         while let_attempts <= max_stall_retries:
             try:
-                return self._chat_internal(message, thinking_enabled, parent_message_id)
+                let_response = self._chat_internal(message, thinking_enabled, parent_message_id)
+
+                # Detectar respuesta vacia: stream termino sin producir contenido.
+                # Esto pasa cuando DeepSeek piensa y cierra el stream sin responder,
+                # o cuando hay un error silencioso en el SSE.
+                if not let_response or not let_response.strip():
+                    let_attempts += 1
+                    if let_attempts <= max_stall_retries:
+                        print(
+                            f"  [EMPTY] Respuesta vacia detectada. "
+                            f"Reintentando ({let_attempts}/{max_stall_retries})...",
+                            file=sys.stderr,
+                        )
+                        self._chat_session_id = self.create_chat_session()
+                        continue
+                    else:
+                        print(
+                            f"  [EMPTY] Agotados {max_stall_retries} reintentos. "
+                            f"DeepSeek retorna respuestas vacias.",
+                            file=sys.stderr,
+                        )
+                        raise StallDetectedError(
+                            "DeepSeek retorno respuesta vacia tras "
+                            f"{max_stall_retries} reintentos."
+                        )
+
+                return let_response
+
             except StallDetectedError as e:
                 let_attempts += 1
                 let_last_error = e
@@ -363,8 +394,6 @@ class DeepSeekWebSession:
                         f"  [STALL] Reintentando ({let_attempts}/{max_stall_retries})...",
                         file=sys.stderr,
                     )
-                    # Crear nueva sesion de chat para el retry
-                    # (la anterior puede estar corrupta)
                     self._chat_session_id = self.create_chat_session()
                 else:
                     print(
