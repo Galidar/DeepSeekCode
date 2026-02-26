@@ -33,14 +33,17 @@ from .web_tool_caller import (
 # Patterns that should NEVER appear in Phase 3 (user task) messages.
 # These are acknowledgment instructions meant only for Phase 1/2.
 _PHASE3_STRIP_PATTERNS = [
-    # Spanish variations
+    # Spanish variations (OK legacy)
     r',?\s*(?:di|responde|contesta|dime)\s+(?:solo|solamente|unicamente)\s+["\']?OK["\']?\.?',
     r',?\s*responde\s+unicamente\s*:?\s*["\']?OK["\']?\.?',
     r',?\s*solo\s+(?:di|responde|contesta)\s+["\']?OK["\']?\.?',
+    # Spanish variations (DEEPSEEK CODE ACTIVADO)
+    r',?\s*(?:di|responde|contesta)\s+(?:solo|unicamente)\s+["\']?DEEPSEEK CODE ACTIVADO["\']?\.?',
+    r',?\s*responde\s+unicamente\s*:?\s*["\']?DEEPSEEK CODE ACTIVADO["\']?\.?',
     # English variations
     r',?\s*(?:just\s+)?(?:say|respond|reply)\s+(?:only\s+)?["\']?OK["\']?\.?',
-    # Generic "solo OK" / "only OK" at end of message
-    r',?\s+(?:solo|only)\s+["\']?OK["\']?\s*\.?\s*$',
+    # Generic at end of message
+    r',?\s+(?:solo|only)\s+["\']?(?:OK|DEEPSEEK CODE ACTIVADO)["\']?\s*\.?\s*$',
 ]
 _PHASE3_RE = re.compile('|'.join(_PHASE3_STRIP_PATTERNS), re.IGNORECASE)
 
@@ -50,7 +53,7 @@ def _sanitize_phase3(message: str) -> str:
 
     AI agents (like Claude Code) sometimes append "di solo OK" or similar
     phrases when constructing delegate commands.  DeepSeek then literally
-    obeys and responds "OK" instead of executing the task.
+    obeys and responds "DEEPSEEK CODE ACTIVADO" instead of executing the task.
 
     This function strips those patterns so Phase 3 only contains the task.
     """
@@ -89,7 +92,7 @@ async def chat_in_session(
     """Chat within a named session with full conversation continuity.
 
     Flow per message:
-    1. System prompt → "OK" (first message only)
+    1. System prompt → "DEEPSEEK CODE ACTIVADO" (first message only)
     2. Context injections → "Skill X aceptada" (only new ones)
     3. User message (clean, just the text)
 
@@ -138,8 +141,8 @@ async def chat_in_session(
     if not session.system_prompt_sent and system_prompt:
         tools_prompt = build_tools_prompt(tools) if tools else ""
         init_prompt = system_prompt + tools_prompt + (
-            "\n\nResponde UNICAMENTE 'OK' para confirmar que entendiste "
-            "tus instrucciones y herramientas."
+            "\n\nResponde UNICAMENTE 'DEEPSEEK CODE ACTIVADO' para confirmar "
+            "que entendiste tu identidad y herramientas."
         )
         print(f"  [session] Enviando prompt tecnico...", file=sys.stderr)
         try:

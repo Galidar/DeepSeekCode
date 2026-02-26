@@ -265,28 +265,68 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
                         user_message: str, tools: list, max_steps: int = 50) -> str:
     """Ejecuta un paso de agente en modo web con tool calling simulado.
 
-    Historial independiente del chat principal. Usado por AgentEngine.
+    Usa Phase 1 (identidad + herramientas) con message chaining via parent_message_id.
+    DeepSeek PRIMERO confirma su identidad con "DEEPSEEK CODE ACTIVADO" y solo
+    DESPUES recibe el mensaje del usuario.
+
+    Flow:
+    1. Phase 1: system_prompt + tools → "DEEPSEEK CODE ACTIVADO"
+    2. User message (chained via parent_id)
+    3. Tool loop: response → extract tools → execute → send results (chained)
+
+    Usado por AgentEngine y _chat_with_system_web().
     """
     import asyncio
+    import sys
     from ..server.protocol import MCPRequest, MCPMethod
+    from .web_session import TokenExpiredError
 
-    agent_history = [{"role": "user", "content": user_message}]
+    # --- Crear sesion fresca para este agente ---
+    let_chat_session_id = web_session.create_chat_session()
+    web_session._chat_session_id = let_chat_session_id
+
+    # --- Phase 1: Identidad + herramientas → "DEEPSEEK CODE ACTIVADO" ---
     tools_prompt = build_tools_prompt(tools) if tools else ""
+    init_prompt = system_prompt + tools_prompt + (
+        "\n\nResponde UNICAMENTE 'DEEPSEEK CODE ACTIVADO' para confirmar "
+        "que entendiste tu identidad y herramientas."
+    )
+
+    print(f"  [agente] Phase 1: Enviando identidad + herramientas...", file=sys.stderr)
+    try:
+        _init_response = await asyncio.get_event_loop().run_in_executor(
+            None, web_session.chat, init_prompt, True, None,
+        )
+    except TokenExpiredError as e:
+        return f"[Error de sesion] {e}. Ejecuta /login para renovar."
+
+    let_parent_id = web_session.last_message_id
+    print(f"  [agente] Phase 1: DeepSeek confirmo identidad (parent_id={let_parent_id})", file=sys.stderr)
+
+    # --- Phase 3: User message + tool loop (chained via parent_id) ---
+    prompt = user_message
 
     for step in range(max_steps):
-        prompt = build_web_prompt(system_prompt, agent_history, tools_prompt)
-        response = await asyncio.get_event_loop().run_in_executor(
-            None, web_session.chat, prompt
-        )
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None, web_session.chat, prompt, True, let_parent_id,
+            )
+        except TokenExpiredError as e:
+            return f"[Error de sesion] {e}. Ejecuta /login para renovar."
+
+        # Capturar message_id para continuidad
+        let_parent_id = web_session.last_message_id
+
+        # Extraer tool calls
         tool_calls, clean_text = extract_tool_calls(response)
 
         if not tool_calls:
+            # Respuesta final — limpiar si hubo tool calls previos
             cleaned = clean_final_response(response) if step > 0 else response
             return cleaned
 
-        if clean_text:
-            agent_history.append({"role": "assistant", "content": clean_text})
-
+        # Ejecutar herramientas
+        results = []
         for idx, call in enumerate(tool_calls):
             tool_name = call["tool"]
             arguments = call["args"]
@@ -303,8 +343,13 @@ async def run_agent_web(web_session, mcp_server, system_prompt: str,
                 result = tool_response.result
                 result_str = json.dumps(result, ensure_ascii=False) if isinstance(result, dict) else str(result)
 
-            formatted = format_tool_result(tool_name, result_str)
-            agent_history.append({"role": "tool_result", "content": formatted})
-            print(f"  [agente] iter={step+1}/{max_steps} {tool_name} -> {len(result_str)} chars")
+            results.append(format_tool_result(tool_name, result_str))
+            print(
+                f"  [agente] iter={step+1}/{max_steps} {tool_name} -> {len(result_str)} chars",
+                file=sys.stderr,
+            )
+
+        # Siguiente prompt son los resultados (encadenados via parent_id)
+        prompt = "\n".join(results)
 
     return "Se alcanzo el numero maximo de iteraciones en modo agente web."

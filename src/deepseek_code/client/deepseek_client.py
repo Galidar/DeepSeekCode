@@ -257,7 +257,7 @@ class DeepSeekCodeClient:
         """Chat con continuidad de sesion persistente (multi-sesion).
 
         Flow per message:
-        1. System prompt + tools → "OK" (first message only)
+        1. System prompt + tools → "DEEPSEEK CODE ACTIVADO" (first message only)
         2. Context injections → confirmation (only new ones)
         3. User message (clean text)
 
@@ -372,7 +372,7 @@ class DeepSeekCodeClient:
         """Modo sesion web con continuidad persistente.
 
         Flow per message:
-        1. System prompt + tools → "OK" (first message only)
+        1. System prompt + tools → "DEEPSEEK CODE ACTIVADO" (first message only)
         2. Skills/memory/etc → "Skill X aceptada" (only new ones)
         3. User message (clean text only)
         """
