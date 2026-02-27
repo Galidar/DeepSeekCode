@@ -82,6 +82,58 @@ def extract_functions(response: str) -> Dict[str, str]:
     return functions
 
 
+def extract_classes(response: str) -> Dict[str, str]:
+    """Extrae clases ES6 completas con su cuerpo del codigo.
+
+    Soporta:
+    - class NombreClase { ... }
+    - export class NombreClase { ... }
+    - class NombreClase extends Base { ... }
+    - export default class NombreClase { ... }
+
+    Detecta cierre de llaves por conteo de braces.
+
+    Returns:
+        Dict con nombre_clase -> codigo_completo
+    """
+    classes = {}
+    lines = response.split('\n')
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        # Match: [export [default]] class ClassName [extends Base] {
+        match = re.match(
+            r'^(?:export\s+(?:default\s+)?)?class\s+(\w+)(?:\s+extends\s+\w+)?\s*\{?',
+            line
+        )
+
+        if match:
+            class_name = match.group(1)
+            brace_count = 0
+            found_open = False
+            class_lines = []
+
+            for j in range(i, min(i + 500, len(lines))):
+                class_lines.append(lines[j])
+                for ch in lines[j]:
+                    if ch == '{':
+                        brace_count += 1
+                        found_open = True
+                    elif ch == '}':
+                        brace_count -= 1
+
+                if found_open and brace_count <= 0:
+                    break
+
+            classes[class_name] = '\n'.join(class_lines)
+            i += len(class_lines)
+        else:
+            i += 1
+
+    return classes
+
+
 def extract_variable_declarations(response: str) -> Dict[str, str]:
     """Extrae declaraciones top-level de variables/constantes.
 

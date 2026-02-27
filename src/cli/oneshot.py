@@ -160,6 +160,16 @@ def run_agent_oneshot(goal: str, json_mode: bool = False, config_path: str = Non
         )
 
         async def _run():
+            # --- Serena auto-init: activar code intelligence en agent mode ---
+            if app.serena_manager:
+                try:
+                    let_serena_ok, let_serena_msg = await app.serena_manager.start()
+                    if let_serena_ok:
+                        print(f"  [agent] Serena activada: {let_serena_msg}", file=sys.stderr)
+                    else:
+                        print(f"  [agent] Serena no disponible: {let_serena_msg}", file=sys.stderr)
+                except Exception as e:
+                    print(f"  [agent] Serena init fallido (no critico): {e}", file=sys.stderr)
             return await agent.run(goal)
 
         start_time = time.time()
@@ -411,16 +421,31 @@ def run_delegate_oneshot(
                     "estimated_tokens": template_analysis["estimated_tokens"],
                     "recommended_split": template_analysis["recommended_split"],
                 }
-            # Token usage report — injections tracked per-session now
+            # Token usage report — estimate Phase 2 injection tokens
+            let_skills_chars = 0
+            let_surgical_chars = 0
+            let_global_chars = 0
+            for inj in call_params.get("pending_injections", []):
+                let_inj_type = inj.get("type", "") if isinstance(inj, dict) else ""
+                let_inj_content = inj.get("content", "") if isinstance(inj, dict) else str(inj)
+                if let_inj_type.startswith("skill"):
+                    let_skills_chars += len(let_inj_content)
+                elif let_inj_type in ("surgical", "memory"):
+                    let_surgical_chars += len(let_inj_content)
+                elif let_inj_type in ("global", "knowledge"):
+                    let_global_chars += len(let_inj_content)
+                else:
+                    let_skills_chars += len(let_inj_content)  # default bucket
+
             result["token_usage"] = build_token_usage(
                 system_prompt=base_system,
-                skills_context="",  # Now injected as Phase 2
-                surgical_briefing="",  # Now injected as Phase 2
+                skills_context="x" * let_skills_chars,  # Phase 2 estimated
+                surgical_briefing="x" * let_surgical_chars,  # Phase 2 estimated
                 user_prompt=task,
                 template=template,
                 context=context,
                 response=response,
-                global_briefing="",  # Now injected as Phase 2
+                global_briefing="x" * let_global_chars,  # Phase 2 estimated
             )
             result["session_injections"] = len(call_params["pending_injections"])
             output_json(result)

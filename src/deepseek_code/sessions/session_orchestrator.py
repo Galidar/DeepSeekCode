@@ -166,6 +166,16 @@ class SessionOrchestrator:
         if not self.skills_dir:
             return []
 
+        # Fallback: si el directorio configurado no existe, buscar el default
+        import os
+        if not os.path.isdir(self.skills_dir):
+            from cli.config_loader import SKILLS_DIR
+            if os.path.isdir(SKILLS_DIR):
+                self.skills_dir = SKILLS_DIR
+            else:
+                print(f"  [orchestrator] Skills dir no encontrado: {self.skills_dir}", file=sys.stderr)
+                return []
+
         try:
             from ..skills.skill_injector import detect_relevant_skills, load_skill_contents
             from ..client.task_classifier import classify_task, TaskLevel

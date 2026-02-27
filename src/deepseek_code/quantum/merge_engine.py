@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from .merge_helpers import (
-    extract_todo_blocks, extract_functions, extract_variable_declarations,
+    extract_todo_blocks, extract_functions, extract_classes,
+    extract_variable_declarations,
     detect_duplicate_functions, pick_better_implementation,
     validate_braces, validate_parentheses, deduplicate_lines,
 )
@@ -179,17 +180,24 @@ def _merge_by_functions(
     response_a: str,
     response_b: str,
 ) -> MergeResult:
-    """Estrategia 2: Merge por extraccion de funciones.
+    """Estrategia 2: Merge por extraccion de funciones y clases.
 
-    Extrae funciones y variables de ambas respuestas, deduplica por nombre,
-    y concatena en orden: variables primero, luego funciones.
+    Extrae funciones, clases ES6 y variables de ambas respuestas,
+    deduplica por nombre, y concatena en orden:
+    variables primero, luego clases, luego funciones.
     """
     funcs_a = extract_functions(response_a)
     funcs_b = extract_functions(response_b)
+    classes_a = extract_classes(response_a)
+    classes_b = extract_classes(response_b)
     vars_a = extract_variable_declarations(response_a)
     vars_b = extract_variable_declarations(response_b)
 
-    total_symbols = len(funcs_a) + len(funcs_b) + len(vars_a) + len(vars_b)
+    total_symbols = (
+        len(funcs_a) + len(funcs_b)
+        + len(classes_a) + len(classes_b)
+        + len(vars_a) + len(vars_b)
+    )
     if total_symbols < 2:
         return MergeResult(merged="", success=False, strategy="functions_failed")
 
@@ -202,13 +210,25 @@ def _merge_by_functions(
         if name not in merged_vars:
             merged_vars[name] = code
         else:
-            # Variable duplicada entre angulos: elegir mejor, reportar
             merged_vars[name] = pick_better_implementation(merged_vars[name], code)
             var_conflicts.append(f"Variable duplicada: {name}")
 
+    # Fusionar clases (resolver duplicados)
+    class_duplicates = detect_duplicate_functions(classes_a, classes_b)
+    conflicts = [f"Clase duplicada: {d}" for d in class_duplicates]
+
+    merged_classes = {}
+    for name, code in classes_a.items():
+        merged_classes[name] = code
+    for name, code in classes_b.items():
+        if name not in merged_classes:
+            merged_classes[name] = code
+        else:
+            merged_classes[name] = pick_better_implementation(merged_classes[name], code)
+
     # Fusionar funciones (resolver duplicados)
-    duplicates = detect_duplicate_functions(funcs_a, funcs_b)
-    conflicts = [f"Funcion duplicada: {d}" for d in duplicates]
+    func_duplicates = detect_duplicate_functions(funcs_a, funcs_b)
+    conflicts.extend([f"Funcion duplicada: {d}" for d in func_duplicates])
     conflicts.extend(var_conflicts)
 
     merged_funcs = {}
@@ -220,11 +240,15 @@ def _merge_by_functions(
         else:
             merged_funcs[name] = pick_better_implementation(merged_funcs[name], code)
 
-    # Componer: variables primero, luego funciones
+    # Componer: variables primero, luego clases, luego funciones
     parts = []
     for name, code in merged_vars.items():
         parts.append(code)
-    if merged_vars and merged_funcs:
+    if merged_vars and (merged_classes or merged_funcs):
+        parts.append("")  # Separador
+    for name, code in merged_classes.items():
+        parts.append(code)
+    if merged_classes and merged_funcs:
         parts.append("")  # Separador
     for name, code in merged_funcs.items():
         parts.append(code)
@@ -234,19 +258,25 @@ def _merge_by_functions(
 
     braces_ok, brace_diff = validate_braces(merged)
 
+    let_total_merged = len(merged_funcs) + len(merged_classes)
     stats = {
         "functions_from_a": len(funcs_a),
         "functions_from_b": len(funcs_b),
+        "classes_from_a": len(classes_a),
+        "classes_from_b": len(classes_b),
         "vars_from_a": len(vars_a),
         "vars_from_b": len(vars_b),
-        "func_duplicates_resolved": len(duplicates),
+        "func_duplicates_resolved": len(func_duplicates),
+        "class_duplicates_resolved": len(class_duplicates),
         "var_duplicates_resolved": len(var_conflicts),
         "total_merged_funcs": len(merged_funcs),
+        "total_merged_classes": len(merged_classes),
         "total_merged_vars": len(merged_vars),
         "braces_balanced": braces_ok,
     }
 
-    success = braces_ok and len(merged_funcs) >= 2
+    # Exito si hay al menos 1 funcion/clase merged y braces OK
+    success = braces_ok and let_total_merged >= 1
 
     return MergeResult(
         merged=merged,
