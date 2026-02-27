@@ -13,7 +13,7 @@
 ![Commands](https://img.shields.io/badge/Commands-5-22C55E?style=for-the-badge)
 ![Skills](https://img.shields.io/badge/Knowledge-1000+_lines-F59E0B?style=for-the-badge)
 ![Intelligence](https://img.shields.io/badge/Intelligence-5_Features-EF4444?style=for-the-badge)
-![Version](https://img.shields.io/badge/v4.1.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/v4.2.0-blue?style=for-the-badge)
 ![Semantic](https://img.shields.io/badge/Semantic_Engine-TF--IDF_|_Bayesian-9333EA?style=for-the-badge)
 ![Efficient](https://img.shields.io/badge/Token_Savings-~99.8%25-10B981?style=for-the-badge)
 ![Sessions](https://img.shields.io/badge/Sessions-Persistent_+_Knowledge_Transfer-06B6D4?style=for-the-badge)
@@ -26,7 +26,7 @@
 
 ## What This Plugin Does
 
-This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package**, **Semantic Engine**, **Token-Efficient Pipeline**, and **Session Orchestrator** for self-evolving code generation. v4.1 enforces mandatory Phase 1 identity protocol ("DEEPSEEK CODE ACTIVADO") across ALL modes — including agent mode which now uses message chaining via `parent_message_id` instead of monolithic prompts. v2.6 persistent sessions with Phase 2 injection, cross-chat knowledge transfer via `--transfer-from`, auto-summaries via `--session-digest`, and interactive chat management (`/new`, `/chats`, `/switch`, `/close`). Session reuse cuts repeat-call tokens by ~99.8%. Includes a comprehensive 1200+ line knowledge base covering every feature, mode, and configuration.
+This plugin gives Claude Code **complete operational knowledge** of the DeepSeek Code system — how to delegate tasks, run parallel quantum sessions, execute multi-step plans, conduct iterative dialogues, and leverage the **Intelligence Package**, **Semantic Engine**, **Token-Efficient Pipeline**, and **Session Orchestrator** for self-evolving code generation. v4.2 certified: **Serena auto-initializes in agent mode** (3 code intelligence tools available without manual `/serena start`), **quantum merge now deduplicates ES6 classes** (extract_classes + pick_better_implementation, strategy upgrades from raw_concatenation to function_based), **skills_dir fallback** in orchestrator auto-detects correct path, **Phase 2 token tracking** reports real injection sizes. v4.1 enforces mandatory Phase 1 identity protocol ("DEEPSEEK CODE ACTIVADO") across ALL modes. Session reuse cuts repeat-call tokens by ~99.8%. Includes a comprehensive 1200+ line knowledge base covering every feature, mode, and configuration.
 
 ```mermaid
 graph LR
@@ -136,10 +136,10 @@ The plugin includes **deepseek-code-mastery** — a comprehensive 1200+ line kno
 | Topic | Coverage |
 |:-----:|:---------|
 | **Delegation** | Oneshot, auto-continuation, template filling, validation |
-| **Quantum Bridge** | Dual parallel sessions, angle detection, 3-strategy merge |
+| **Quantum Bridge** | Dual parallel sessions, angle detection, 3-strategy merge with class + function deduplication |
 | **Multi-Step** | Sequential/parallel steps, dependencies, dual mode per step |
 | **Converse** | Multi-turn dialogue, shared quantum thinking, history |
-| **Agent** | 100-step autonomous engine with Phase 1 identity + message chaining |
+| **Agent** | 100-step autonomous engine with Phase 1 identity + message chaining + Serena auto-init |
 | **Skills** | 3-tier injection system (core/domain/specialist, 80K budget) |
 | **Memory** | Surgical (per-project) + Global (cross-project) learning |
 | **🔮 Intelligence** | Introspective debugging, shadow learning, git conflicts, requirements pipeline, health reports |
@@ -214,7 +214,7 @@ plugin/
 
 <br>
 
-**DeepSeek Code Plugin v4.1.0** — Phase 1 Identity Protocol + Session Orchestrator + Knowledge Transfer + Token-Efficient Pipeline + Semantic Engine + self-evolving AI-to-AI collaboration inside Claude Code.
+**DeepSeek Code Plugin v4.2.0** — Phase 1 Identity Protocol + Session Orchestrator + Knowledge Transfer + Token-Efficient Pipeline + Semantic Engine + Serena Auto-Init + Class Dedup Merge + self-evolving AI-to-AI collaboration inside Claude Code.
 
 <br>
 

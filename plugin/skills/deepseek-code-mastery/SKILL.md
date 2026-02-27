@@ -1,6 +1,6 @@
 ---
 name: deepseek-code-mastery
-description: Referencia completa para operar DeepSeek Code (1M tokens por chat via web, open source, sin expiracion) como sistema multi-agente subordinado a Claude Code. v4.0 con sistema de identidad, prompts adaptativos, Token-Efficient Pipeline (save_response.py directo a disco, ~96% ahorro), Semantic Engine central (TF-IDF, cosine similarity, Bayesian Beta, temporal decay, Mann-Kendall), Skills por similaridad semantica, memoria dual (surgical + global), Intelligence Package (5 features), dual quantum sessions, multi-step, multi-session, converse, y protocolo de sesiones 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
+description: Referencia completa para operar DeepSeek Code (1M tokens por chat via web, open source, sin expiracion) como sistema multi-agente subordinado a Claude Code. v4.2 certificado — Serena auto-init en agent mode (3 tools de code intelligence sin intervencion manual), quantum merge con deduplicacion de clases ES6 (extract_classes + pick_better_implementation, strategy function_based), skills_dir fallback automatico en orchestrator, Phase 2 token tracking real. Token-Efficient Pipeline (save_response.py directo a disco, ~96% ahorro), Semantic Engine central (TF-IDF, cosine similarity, Bayesian Beta, temporal decay, Mann-Kendall), Skills por similaridad semantica, memoria dual (surgical + global), Intelligence Package (5 features), dual quantum sessions, multi-step, multi-session, converse, y protocolo de sesiones 3-fases. Usar cuando el usuario pida delegar codigo, generar funciones, crear features, o cualquier tarea de generacion masiva.
 ---
 
 # DeepSeek Code Mastery — Guia Completa para Claude Code
@@ -264,7 +264,7 @@ python run.py --quantum "TAREA" [--template archivo] [--quantum-angles "angulo1,
 ### Estrategias de Merge (en cascada)
 
 1. **Template-guided**: Si hay template con TODOs, asigna cada TODO al angulo que mejor lo resolvio
-2. **Function-based**: Extrae funciones de ambas respuestas, elige la mejor version de cada una
+2. **Function-based (v4.2)**: Extrae funciones, clases ES6, y variables de ambas respuestas. Deduplica clases y funciones con `pick_better_implementation()` (score por lineas de codigo, control flow, error handling, validacion). Compone: variables → clases → funciones. Threshold: >= 1 simbolo merged para usar esta estrategia.
 3. **Raw**: Concatena ambas respuestas eliminando duplicados
 
 ### Cuando Usar Quantum vs Delegate Simple
@@ -604,6 +604,8 @@ python run.py --agent "crea un proyecto React con auth, dashboard y API backend"
 ```
 
 El agente planifica, ejecuta acciones con herramientas, evalua resultados, y adapta su plan. Incluye la palabra `COMPLETADO` cuando termina.
+
+**Serena Auto-Init (v4.2):** En agent mode, Serena se inicializa automaticamente al arrancar — no requiere `/serena start` manual. Las 3 herramientas de code intelligence (`serena_search_for_pattern`, `serena_get_symbols_overview`, `serena_find_symbol`) quedan disponibles para que el agente navegue codigo de forma simbolica sin intervencion del usuario.
 
 ---
 
@@ -1008,8 +1010,8 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 │       ├── quantum\
 │       │   ├── dual_session.py      # DualSession.parallel_chat()
 │       │   ├── angle_detector.py    # Auto-deteccion de angulos
-│       │   ├── merge_engine.py      # 3 estrategias de merge
-│       │   ├── merge_helpers.py     # Funciones auxiliares de merge
+│       │   ├── merge_engine.py      # 3 estrategias de merge (v4.2: class dedup)
+│       │   ├── merge_helpers.py     # extract_functions, extract_classes, extract_variable_declarations, deduplicate_lines
 │       │   ├── quantum_runner.py    # Orquestador quantum
 │       │   └── quantum_helpers.py   # create_shared_mcp_server, create_client, create_pool_clients
 │       ├── surgical\
@@ -1029,7 +1031,7 @@ DeepSeek Code supports 3 languages: **English** (default), **Spanish**, and **Ja
 │       ├── sessions\                # v2.5-2.6: Sesiones persistentes
 │       │   ├── session_store.py     # SessionStore + ChatSession (JSON persistente)
 │       │   ├── session_namespace.py # build_session_name(), slugify(), parse_session_name()
-│       │   ├── session_orchestrator.py # SessionOrchestrator (3-phase flow)
+│       │   ├── session_orchestrator.py # SessionOrchestrator (3-phase flow, v4.2: skills_dir fallback)
 │       │   ├── summary_engine.py    # Auto-summary + topic extraction
 │       │   └── knowledge_transfer.py # Cross-session knowledge transfer
 │       ├── intelligence\

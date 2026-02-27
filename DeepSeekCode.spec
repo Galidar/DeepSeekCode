@@ -1,4 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
+# DeepSeek Code v4.2.0 — Certified build spec
+# All modules: cli (22), deepseek_code (68), external deps
 from PyInstaller.utils.hooks import collect_all
 
 datas = [('src', 'src'), ('skills', 'skills')]

@@ -438,7 +438,7 @@ python run.py --delegate "add sorting" --session "inventory" --transfer-from "de
 
 <br>
 
-**⚡ Quantum Bridge** — The most powerful mode. 2 DeepSeek sessions attack the same task from different angles simultaneously (e.g., "backend logic" and "frontend render"). Auto-selects `deepseek-reasoner` for complex tasks (64K output including chain-of-thought). Results are auto-merged using a 3-strategy cascade: TODO-block matching → function extraction → raw concatenation. Large templates are automatically chunked to prevent hallucination.
+**⚡ Quantum Bridge** — The most powerful mode. 2 DeepSeek sessions attack the same task from different angles simultaneously (e.g., "backend logic" and "frontend render"). Auto-selects `deepseek-reasoner` for complex tasks (64K output including chain-of-thought). Results are auto-merged using a 3-strategy cascade: TODO-block matching → function + class extraction with deduplication → raw concatenation. ES6 classes are extracted, duplicate classes resolved via `pick_better_implementation()`, and composed in order: variables → classes → functions. Large templates are automatically chunked to prevent hallucination.
 ```bash
 python run.py --quantum "create combat system" --quantum-angles "logic,render" --json
 ```
@@ -460,7 +460,7 @@ python run.py --converse "add spatial audio" --session "audio" --json
 
 <br>
 
-**🤖 Autonomous Agent** — Give it a goal. It confirms its identity first ("DEEPSEEK CODE ACTIVADO"), then plans, executes tools via message chaining (`parent_message_id`), self-corrects, and iterates up to 100 steps autonomously.
+**🤖 Autonomous Agent** — Give it a goal. It confirms its identity first ("DEEPSEEK CODE ACTIVADO"), auto-initializes Serena code intelligence (3 tools: search_for_pattern, get_symbols_overview, find_symbol), then plans, executes tools via message chaining (`parent_message_id`), self-corrects, and iterates up to 100 steps autonomously.
 ```bash
 > /agent build a REST API with authentication, CRUD endpoints, and tests
 ```
@@ -551,7 +551,7 @@ Two authentication modes:
 
 **🔮 Intelligence Package** — 5 features powered by the Semantic Engine: introspective debugging (root cause analysis), shadow learning (learns from your git corrections), git conflict resolution (AI-powered MCP tool), requirements pipeline (document to plan), predictive intelligence (Bayesian composite risk with confidence intervals).
 
-**🔍 Serena** — Symbolic code navigation with two modes: external `serena-agent` (LSP-powered) or a built-in regex engine that extracts classes, functions, and methods across Python, JavaScript, TypeScript, Java, Go, and Rust.
+**🔍 Serena** — Symbolic code navigation with two modes: external `serena-agent` (LSP-powered) or a built-in regex engine that extracts classes, functions, and methods across Python, JavaScript, TypeScript, Java, Go, and Rust. Auto-initializes in agent mode — no manual `/serena start` needed.
 
 **🌐 i18n** — 155 translation keys across English (full), Spanish (full), and Japanese (36 keys + automatic English fallback). Language selector on first run, switchable anytime with `/lang`.
 
