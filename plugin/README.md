@@ -31,7 +31,7 @@ This plugin gives Claude Code **complete operational knowledge** of the DeepSeek
 ```mermaid
 graph LR
     CC[🧠 Claude Code<br/>with Plugin] -->|"/deepseek-code:delegate"| DS[⚡ DeepSeek Code<br/>1M tokens]
-    CC -->|"/deepseek-code:quantum"| QB{Quantum Bridge}
+    CC -->|"/deepseek-code:quantum"| QB{Quantum Bridge<br/>class + function dedup}
     CC -->|"/deepseek-code:multi-step"| MS[Multi-Step]
     CC -->|"/deepseek-code:converse"| CV[Conversational]
 
@@ -39,6 +39,7 @@ graph LR
     QB -->|Angle β| DSB[DeepSeek B]
 
     DS -->|complete code| CC
+    DS -.->|agent mode| SR[🔍 Serena auto-init]
     QB -->|merged result| CC
     MS -->|step results| CC
     CV -->|iterative result| CC
@@ -50,6 +51,7 @@ graph LR
     style QB fill:#7C3AED,stroke:#333,color:#fff
     style MS fill:#0EA5E9,stroke:#333,color:#fff
     style CV fill:#10B981,stroke:#333,color:#fff
+    style SR fill:#8B5CF6,stroke:#333,color:#fff
 ```
 
 ---

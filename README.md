@@ -143,7 +143,7 @@ graph TB
     User -->|"via Claude Code plugin"| CC["🧠 Claude Code<br/>200K tokens · orchestrates"]
 
     CC -->|"/delegate — single task"| DEL["📋 Oneshot<br/>auto-validates, retries ×3"]
-    CC -->|"/quantum — dual parallel"| QB["⚡ Quantum Bridge<br/>2 sessions, 3-way merge"]
+    CC -->|"/quantum — dual parallel"| QB["⚡ Quantum Bridge<br/>2 sessions, 3-strategy merge + class dedup"]
     CC -->|"/multi-step — complex plans"| MS["📊 Multi-Step<br/>sequential + parallel groups"]
     CC -->|"/converse — iterative"| CV["💬 Conversational<br/>shared thinking, multi-turn"]
 
@@ -159,8 +159,8 @@ graph TB
     DS --> SKILLS["📚 51 Skills<br/>TF-IDF semantic matching + Bayesian boost"]
     DS --> MEM["🧬 Dual Memory<br/>surgical per-project + global cross-project"]
     DS --> INTEL["🔮 Intelligence Package<br/>shadow learning · debugging · prediction"]
-    DS --> AGENT["🤖 Autonomous Agent<br/>up to 100 self-correcting steps"]
-    DS --> SERENA["🔍 Serena<br/>LSP + regex code navigation"]
+    DS --> AGENT["🤖 Autonomous Agent<br/>100 steps + Serena auto-init"]
+    DS --> SERENA["🔍 Serena<br/>LSP + regex · auto-init in agent mode"]
 
     style User fill:#6B7280,stroke:#374151,color:#fff
     style CC fill:#E87E04,stroke:#9A3412,color:#fff
